@@ -1,0 +1,14 @@
+'use strict';
+const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
+const {Store}=require('../lib/storage'),{prepareCsv,reconcilePosted}=require('../lib/transaction-workflow');
+(async()=>{const file=process.argv[2];if(!file)throw Error('Usage: node scripts/import-transactions.js CSV [--commit] [--exclude-account NAME]');const directory=process.env.HF_DATA_DIR||path.join(__dirname,'../data'),store=new Store(directory);try{
+const db=store.load(),excludeAccounts=[];for(let i=3;i<process.argv.length;i++)if(process.argv[i]==='--exclude-account')excludeAccounts.push(process.argv[++i]);
+const backup=path.join(directory,'backups','before-transactions-'+Date.now()+'.sqlite');fs.mkdirSync(path.dirname(backup),{recursive:true});await store.backup(backup);
+db.importPreferences={...db.importPreferences,excludeAccounts:[...new Set([...(db.importPreferences?.excludeAccounts||[]),...excludeAccounts])]};
+const stage=prepareCsv(db,fs.readFileSync(file,'utf8'),path.basename(file),{excludeAccounts});stage.userId=db.users[0]?.id||'';stage.sourceHash=crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');db.transactionImports.push(stage);
+let imported=0;const balances=db.accounts.map(a=>[a.id,a.balance]);
+if(process.argv.includes('--commit')){const statusUpdated=reconcilePosted(db,stage);const seen=new Set(db.transactions.map(t=>t.dedupeKey));for(const r of stage.rows){if(!r.include||r.error||seen.has(r.transaction.dedupeKey))continue;seen.add(r.transaction.dedupeKey);const t=r.transaction;if(t.account&&!db.accounts.some(a=>a.name.toLowerCase()===t.account.toLowerCase()))db.accounts.push({id:crypto.randomUUID(),name:t.account,type:'other',person:t.person,balance:0,source:'transaction-import'});db.transactions.push({...t,id:crypto.randomUUID(),source:stage.filename,importId:stage.id,createdAt:new Date().toISOString(),addedBy:'Local CSV import'});imported++;}stage.status='committed';stage.committedAt=new Date().toISOString();stage.result={imported,statusUpdated,duplicates:stage.rows.filter(r=>r.duplicate).length};}
+// Existing account snapshots are not inferred or altered from a partial purchase history.
+if(!db.accounts.slice(0,balances.length).every((a,i)=>a.id===balances[i][0]&&a.balance===balances[i][1]))throw Error('Account balances changed unexpectedly.');
+store.save(db);console.log(JSON.stringify({status:stage.status,rows:stage.rows.length,imported,excluded:stage.rows.filter(r=>r.excluded).length,duplicates:stage.rows.filter(r=>r.duplicate).length,invalid:stage.rows.filter(r=>r.error).length,pending:stage.rows.filter(r=>r.include&&r.transaction.pending).length,ownerMappings:[...new Set(stage.rows.filter(r=>r.ownerMapping).map(r=>r.ownerMapping.from+' → '+r.ownerMapping.to))],backup,importId:stage.id},null,2));
+}finally{store.close();}})().catch(e=>{console.error(e.message);process.exitCode=1;});

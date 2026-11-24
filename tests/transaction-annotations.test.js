@@ -1,0 +1,3 @@
+const test=require('node:test'),assert=require('node:assert/strict'),{transactionAnnotationData:data}=require('../public/transaction-presentation');
+test('note previews cap Unicode text without truncating the saved note',()=>{const notes='🙂'.repeat(310),tx={notes,tags:'Japan, Shared, Japan; Montreal'};const d=data(tx);assert.equal(Array.from(d.note).length,301);assert.equal(d.truncated,true);assert.equal(tx.notes,notes);assert.deepEqual(d.tags,['Japan','Shared','Montreal']);});
+test('blank metadata has no indicator and short notes are unchanged',()=>{assert.deepEqual(data({notes:'  ',tags:' ,; '}),{note:'',truncated:false,tags:[]});assert.equal(data({notes:'Receipt in bag'}).note,'Receipt in bag');});

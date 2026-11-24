@@ -1,0 +1,12 @@
+node_modules/
+.env
+.DS_Store
+
+# Local financial records, generated reports, and imported documents.
+data/
+outputs/
+rogers-transaction.json
+
+# Portable configuration may contain private keys.
+pulse.env
+

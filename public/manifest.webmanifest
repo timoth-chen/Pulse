@@ -1,0 +1,17 @@
+{
+  "background_color": "#141820",
+  "description": "Find your financial rhythm. Your shared household finances in one place.",
+  "display": "standalone",
+  "icons": [
+    {
+      "src": "/assets/pulse-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "name": "Pulse",
+  "short_name": "Pulse",
+  "start_url": "/",
+  "theme_color": "#141820"
+}

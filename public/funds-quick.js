@@ -1,0 +1,153 @@
+/* Saved cash-flow setup and a purchase-first interface. */
+let fundsSavedSetup=null,fundsQuickScope=null,fundsQuickRun=0,fundsSetupRequest=null,fundsInputTimer;
+const fundsScopeQuery=()=>selectedOwner?'?scopeOwner='+encodeURIComponent(selectedOwner):'';
+const fundsHost=$('view-funds').querySelector('section.card'),fundsSettings=document.createElement('details');fundsSettings.id='fcSavedSetup';fundsSettings.innerHTML='<summary>Your cash-flow setup <span id="fcSetupStatus">Not saved yet</span><svg class="funds-setup-chevron" viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="m5 7 5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></summary>';
+while(fundsHost.firstChild)fundsSettings.append(fundsHost.firstChild);fundsHost.append(fundsSettings);
+fundsSettings.querySelector('h3').textContent='Set up once, update when things change';fundsSettings.querySelector('p.muted').textContent='Choose chequing, pay and a forecast window. Linked bills and card payments are included automatically. Add transfers only when you expect them.';
+const quickHero=document.createElement('div');quickHero.className='funds-quick';quickHero.innerHTML='<h3>Will chequing stay above my buffer?</h3><p class="muted">See your expected balance as bills, card payments, pay and transfers come through.</p><button id="fcBaselineBtn" class="text-action">Refresh forecast</button><div class="funds-quick-controls"><label>Look ahead<select id="fcForecastDays" disabled></select></label><label>Purchase total · CAD<input id="fcQuickAmount" type="number" inputmode="decimal" min="0" step=".01" placeholder="e.g. 500.00"/></label><label>Pay with<select id="fcPurchaseAccount" disabled></select></label></div><p id="fcQuickContext" class="muted"></p><p id="fcQuickStatus" role="status"></p><div id="fcQuickResults" aria-live="polite"></div>';
+fundsHost.prepend(quickHero);
+function setFundsButtonsDisabled(disabled){$('fcBaselineBtn').disabled=$('fcQuickAmount').disabled=$('fcForecastDays').disabled=$('fcPurchaseAccount').disabled=disabled;}
+setFundsButtonsDisabled(true);fundsSettings.querySelector('.funds-purchase h4').textContent='Default payment method';['fcPurchaseName','fcAmount','fcPurchaseDate','fcTaxRate'].forEach(id=>$(id).closest('label').classList.add('hidden'));$('fcIncludesTax').closest('label').classList.add('hidden');$('fcBtn').classList.add('hidden');$('fcEnd').closest('label').classList.add('hidden');$('fcStart').closest('label').classList.add('hidden');
+const daysLabel=document.createElement('label');daysLabel.innerHTML='Look ahead<select id="fcQuickDays"><option value="30">30 days</option><option value="60">60 days</option><option value="90">90 days</option><option value="120">120 days</option><option value="180">180 days</option></select>';$('fcBuffer').closest('.formgrid').append(daysLabel);
+const chargeBlock=document.createElement('section');chargeBlock.className='funds-planned-charges hidden';chargeBlock.innerHTML='<h4>Recurring card charges · rent, utilities, internet or Chexy</h4><p class="muted">Add only charges not already scheduled in Recurring or Loans. Enter the base amount and an optional processing fee. Your partner’s repayment belongs under incoming e-transfers; it does not reduce what the card issuer is owed.</p><div id="fcPlannedCharges"></div><button id="fcAddCharge" class="text-action" type="button">＋ Recurring card charge</button>';
+$('fcExtraFlows').parentElement.after(chargeBlock);const saveRow=document.createElement('div');saveRow.className='funds-save-row';saveRow.innerHTML='<button id="fcSaveSetup" class="primary" type="button">Save cash-flow setup</button><p id="fcSaveStatus" role="status"></p>';fundsSettings.append(saveRow);
+const paySources=document.createElement('div');paySources.className='formgrid';paySources.innerHTML='<label>Pay estimate<select id="fcPaySource"><option value="payroll">Predict from Payroll</option><option value="manual">Manual estimate</option><option value="none">No expected pay</option></select></label><label id="fcPayOwnerLabel">Payroll profile<select id="fcPayOwner"></select></label><label id="fcPayEmployerLabel">Employer<select id="fcPayEmployer"><option value="">Choose automatically</option></select></label>';const payNote=document.createElement('p');payNote.id='fcPayPrediction';payNote.className='muted';$('fcIncomeAmount').closest('.formgrid').before(paySources,payNote);const billSources=document.createElement('section');billSources.innerHTML='<h4>Recurring payments come from Bills</h4><p class="muted">Rent, utilities, internet and Chexy charges are managed in Bills. Funds Check automatically uses their amount, processing fee, date and payment account. Card charges are paid through the card’s statement cycle.</p><button id="fcOpenBills" class="text-action" type="button">Manage bills</button><div id="fcBillsPreview"></div>';chargeBlock.after(billSources);$('fcOpenBills').onclick=()=>goView('bills');
+let fundsSourcesRequest=0;
+async function refreshFundsSources(){const version=++fundsSourcesRequest;const manual=$('fcPaySource').value==='manual',payroll=$('fcPaySource').value==='payroll';for(const id of ['fcIncomeAmount','fcIncomeDate','fcIncomeFrequency'])$(id).closest('label').classList.toggle('hidden',!manual);$('fcUsePayroll').classList.add('hidden');$('fcPayrollNote').classList.add('hidden');$('fcPayOwnerLabel').classList.toggle('hidden',!payroll);$('fcPayEmployerLabel').classList.toggle('hidden',!payroll);try{const [profiles,bills]=await Promise.all([api('/api/profiles'),api('/api/bills')]);if(version!==fundsSourcesRequest)return;const owner=$('fcPayOwner').value||activeOwnerName()||signedInUser.name;$('fcPayOwner').innerHTML=profiles.profiles.map(u=>`<option value="${esc(u.name)}">${esc(u.name)}</option>`).join('');$('fcPayOwner').value=owner;$('fcBillsPreview').innerHTML=bills.items.map(b=>`<p>${esc(b.name)} · ${money(Number(b.amount||0)*(1+Number(b.processingFeePercent||0)/100))} · ${esc(b.frequency||'monthly')}${b.payFromAccountId?'':' · payment account needed'}</p>`).join('')||'<p class="muted">No bills saved yet.</p>';if(!payroll){$('fcPayPrediction').textContent=manual?'Manual pay estimate is used instead of Payroll.':'No paycheques will be forecast.';return;}const employer=$('fcPayEmployer').value;const d=await api('/api/funds-payroll-estimate?owner='+encodeURIComponent(owner)+'&date='+localToday()+'&employer='+encodeURIComponent(employer));if(version!==fundsSourcesRequest)return;if(d.employers){$('fcPayEmployer').innerHTML='<option value="">Choose an employer</option>'+d.employers.map(e=>`<option>${esc(e)}</option>`).join('');}else if(d.employer){$('fcPayEmployer').innerHTML=`<option value="">Choose automatically</option><option value="${esc(d.employer)}">${esc(d.employer)}</option>`;if(employer)$('fcPayEmployer').value=employer;}$('fcPayPrediction').textContent=d.amount?money(d.amount)+' take-home · '+d.frequency+' · next predicted payday '+txDateLabel(d.nextDate)+' · '+d.employer+'. '+(d.warning||'Automatically updates when you save a newer pay statement.'):d.warning;}catch(e){$('fcPayPrediction').textContent=e.message;}}
+$('fcPaySource').onchange=refreshFundsSources;$('fcPayOwner').onchange=()=>{$('fcPayEmployer').value='';refreshFundsSources();};$('fcPayEmployer').onchange=refreshFundsSources;
+function addPlannedCharge(value={}){const row=document.createElement('div');row.className='funds-charge-row';row.dataset.id=value.id||crypto.randomUUID();row.innerHTML=`<label>Charge<input data-charge="label" placeholder="e.g. Rent via Chexy"/></label><label>Card<select data-charge="cardId">${fundCards.filter(c=>c.payFromAccountId===$('fcAccount').value).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></label><label>Base amount<input data-charge="amount" type="number" min="0" step=".01"/></label><label>Fee %<input data-charge="feePercent" type="number" min="0" max="100" step=".01" value="0"/></label><label>Next charge<input data-charge="date" type="date" value="${localToday()}"/></label><label>Repeat<select data-charge="frequency"><option value="monthly">Monthly</option><option value="biweekly">Every two weeks</option><option value="weekly">Weekly</option><option value="once">Once</option></select></label><button class="icon-button" type="button" aria-label="Remove planned charge">×</button>`;for(const [key,v]of Object.entries(value)){const field=row.querySelector('[data-charge="'+key+'"]');if(field)field.value=v;}row.querySelector('button').onclick=()=>{row.remove();dirtyFundsSetup();};$('fcPlannedCharges').append(row);}
+$('fcAddCharge').onclick=()=>{addPlannedCharge();dirtyFundsSetup();};
+function fundsSetupPayload(){return {accountId:$('fcAccount').value,cardId:$('fcCard').value,payWith:$('fcPayWith').value,buffer:$('fcBuffer').value||0,days:$('fcQuickDays').value,dailySpend:$('fcDailySpend').value,dailyPayWith:$('fcDailyPayWith').value,incomeSource:$('fcPaySource').value,payrollOwner:$('fcPayOwner').value,payrollEmployer:$('fcPayEmployer').value,incomeAmount:$('fcIncomeAmount').value,incomeDate:$('fcIncomeDate').value,incomeFrequency:$('fcIncomeFrequency').value,extra:[...$('fcExtraFlows').children].map((row,i)=>({id:row.dataset.id||'flow:'+i,label:row.querySelector('[data-flow-label]').value,date:row.querySelector('[data-flow-date]').value,amount:row.dataset.kind==='outgoing'?-Math.abs(Number(row.querySelector('[data-flow-amount]').value)):row.querySelector('[data-flow-amount]').value,frequency:row.querySelector('[data-flow-frequency]').value,kind:row.dataset.kind})),charges:[...$('fcPlannedCharges').children].map(row=>({id:row.dataset.id,...Object.fromEntries([...row.querySelectorAll('[data-charge]')].map(f=>[f.dataset.charge,f.value]))}))};}
+function dirtyFundsSetup(){clearTimeout(fundsInputTimer);++fundsQuickRun;$('fcQuickResults').innerHTML='';$('fcSetupStatus').textContent='Unsaved changes';setFundsButtonsDisabled(true);$('fcSaveStatus').textContent='Save your changes to use them in a quick check.';}
+fundsSettings.addEventListener('input',dirtyFundsSetup);fundsSettings.addEventListener('change',dirtyFundsSetup);
+function updatePurchaseAccounts(){
+ const select=$('fcPurchaseAccount'),setup=fundsSavedSetup;
+ if(!setup){select.replaceChildren();return;}
+ const checking=fundPlanAccounts.find(a=>a.id===setup.accountId);
+ const cards=fundCards.filter(a=>a.payFromAccountId===setup.accountId);
+ const wanted=select.value||(setup.payWith==='credit'?setup.cardId:setup.accountId);
+ const accounts=[checking,...cards].filter(Boolean);
+ select.replaceChildren(...accounts.map(a=>new Option(a.name,a.id)));
+ select.value=accounts.some(a=>a.id===wanted)?wanted:checking?.id||'';
+}
+function hydrateFundsSetup(s){
+ updatePurchaseAccounts();
+ if(s){
+  const range=$('fcForecastDays'),preferred=range.value||String(s.days||90);
+  range.replaceChildren(...[...new Set([7,14,30,60,90,120,180,Number(s.days||90)])].sort((a,b)=>a-b).map(days=>new Option(days+' days',days)));
+  range.value=preferred;
+ }
+ if(!s){fundsSettings.open=true;setFundsButtonsDisabled(true);$('fcQuickContext').textContent='Save your setup below first. Then you can check upcoming cash or test a purchase.';return;}if(s.payrollOwner&&!Array.from($('fcPayOwner').options).some(o=>o.value===s.payrollOwner))$('fcPayOwner').add(new Option(s.payrollOwner,s.payrollOwner));if(s.payrollEmployer&&!Array.from($('fcPayEmployer').options).some(o=>o.value===s.payrollEmployer))$('fcPayEmployer').add(new Option(s.payrollEmployer,s.payrollEmployer));$('fcAccount').value=s.accountId;fundAccountChanged();for(const [id,key]of Object.entries({fcCard:'cardId',fcPayWith:'payWith',fcBuffer:'buffer',fcQuickDays:'days',fcDailySpend:'dailySpend',fcDailyPayWith:'dailyPayWith',fcIncomeAmount:'incomeAmount',fcIncomeDate:'incomeDate',fcIncomeFrequency:'incomeFrequency',fcPaySource:'incomeSource',fcPayOwner:'payrollOwner',fcPayEmployer:'payrollEmployer'}))$(id).value=s[key]??'';$('fcPayWith').onchange();if(!s.incomeSource)$('fcPaySource').value='payroll';if(!s.payrollOwner)$('fcPayOwner').value=activeOwnerName()||signedInUser.name;refreshFundsSources();$('fcExtraFlows').innerHTML='';for(const value of s.extra||[]){extraFundFlow(value.kind==='incoming');const row=$('fcExtraFlows').lastElementChild;row.dataset.id=value.id;for(const [attr,key]of [['label','label'],['date','date'],['amount','amount'],['frequency','frequency']])row.querySelector('[data-flow-'+attr+']').value=key==='amount'?Math.abs(value[key]):value[key];}$('fcPlannedCharges').innerHTML='';for(const value of s.charges||[])addPlannedCharge(value);setFundsButtonsDisabled(false);$('fcSetupStatus').textContent='Saved';$('fcSaveStatus').textContent='';fundsSettings.open=false;$('fcQuickContext').textContent=(fundCards.find(c=>c.id===s.cardId)?.name||'Chequing')+' · '+s.days+' days · latest imported balances and logged expenses. Price is the total in CAD, including tax and any currency conversion.';}
+const oldInitFunds=initFundPlan;
+initFundPlan=async function(){
+ await oldInitFunds();
+ const key=signedInUser?.id+':'+selectedOwner;
+ if(key===fundsQuickScope){await fundsSetupRequest;updatePurchaseAccounts();return;}
+ fundsQuickScope=key;
+ fundsSavedSetup=null;
+ clearTimeout(fundsInputTimer);
+ setFundsButtonsDisabled(true);
+ ++fundsQuickRun;
+ $('fcQuickResults').innerHTML='';
+ $('fcQuickAmount').value='';
+ $('fcForecastDays').replaceChildren();
+ $('fcPurchaseAccount').replaceChildren();
+ $('fcExtraFlows').innerHTML='';
+ $('fcPlannedCharges').innerHTML='';
+ const request=api('/api/funds-setup').then(({setup})=>{
+  if(key!==fundsQuickScope)return;
+  fundsSavedSetup=setup;
+  hydrateFundsSetup(setup);
+  refreshFundsSources();
+ }).catch(error=>{
+  if(key===fundsQuickScope){fundsQuickScope=null;$('fcQuickStatus').textContent=error.message;}
+ }).finally(()=>{if(fundsSetupRequest===request)fundsSetupRequest=null;});
+ fundsSetupRequest=request;
+ return request;
+};
+
+function fundsToolVisible(){
+ const panel=$('financialTool-funds');
+ return !$('view-funds').classList.contains('hidden')||
+  !!panel&&!panel.classList.contains('hidden')&&!$('view-tools').classList.contains('hidden');
+}
+function refreshFundsForecast(){
+ if(!fundsToolVisible()||!fundsSavedSetup||$('fcSetupStatus').textContent==='Unsaved changes')return;
+ return runFundsQuickCheck(!(Number($('fcQuickAmount').value)>0));
+}
+const loadCoverageBeforeFundsForecast=loadCoverage;
+loadCoverage=async function(){
+ await loadCoverageBeforeFundsForecast();
+ await refreshFundsForecast();
+};
+$('fcSaveSetup').onclick=async()=>{const button=$('fcSaveSetup');button.disabled=true;try{const d=await put('/api/funds-setup'+fundsScopeQuery(),fundsSetupPayload());fundsSavedSetup=d.setup;hydrateFundsSetup(d.setup);await refreshFundsForecast();}catch(e){$('fcSaveStatus').textContent=e.message;}finally{button.disabled=false;}};
+async function runFundsQuickCheck(baseline=false){clearTimeout(fundsInputTimer);const run=++fundsQuickRun,scope=fundsScopeQuery();$('fcQuickStatus').textContent='Updating forecast…';try{if(!baseline&&$('fcQuickAmount').value==='')throw Error('Enter the total purchase price in CAD.');const d=await post('/api/funds-setup/check'+scope,{amount:baseline?0:$('fcQuickAmount').value,date:localToday(),days:Number($('fcForecastDays').value),...(baseline?{}:{purchaseAccountId:$('fcPurchaseAccount').value})});if(run!==fundsQuickRun||scope!==fundsScopeQuery())return;const existing=d.baseline.firstAtOrBelowZero,warning=d.firstAtOrBelowZero;
+ const belowBuffer=d.buffer>0&&!d.canAfford&&d.complete;
+ const heading=existing?'Your current plan reaches zero or below':warning?'This purchase would take chequing to zero or below':!d.complete?'Some forecast details need attention':!belowBuffer?(baseline?'Chequing is projected to cover upcoming payments':'The forecast stays above zero with this purchase'):'The forecast leaves less than your cash buffer';
+ const tone=!d.complete&&!warning&&!existing?'review':Math.min(d.minimum,d.baseline.minimum)<0?'short':belowBuffer?'uncertain':'covered';
+ const zeroText=(label,event)=>event?`<p>${label} · ${esc(txDateLabel(event.date))} · ${money(event.balance)} after ${esc(event.label)}</p>`:'';
+ $('fcQuickStatus').textContent='';$('fcQuickResults').innerHTML=`<section class="funds-verdict ${tone}"><h4>${heading}</h4>${zeroText('Current plan',existing)}${!baseline&&warning?zeroText('With purchase',warning):''}${!warning&&!existing?`<p>${d.complete?`Lowest projected cash: ${money(d.minimum)} on ${esc(txDateLabel(d.minimumDate))}.`:'Review the setup and warnings below before relying on the projection.'}</p>`:''}</section><div class="report-totals">${[[baseline?'Lowest chequing balance':'Lowest with purchase',d.minimum],['Cash at forecast end',d.endBalance],baseline?['Cash buffer',d.buffer]:['Lowest without purchase',d.baseline.minimum],['Reserved after forecast',d.reservedForLater]].map(([label,value])=>`<div><strong>${money(value)}</strong><span>${label}</span></div>`).join('')}</div>${d.payrollPrediction?.amount?`<p class="muted">Estimated pay: ${money(d.payrollPrediction.amount)} · ${esc(d.payrollPrediction.frequency)} · ${esc(d.payrollPrediction.employer)} · based on ${esc(txDateLabel(d.payrollPrediction.sourceDate))}.</p>`:''}${d.purchasePaymentDate?`<p>This purchase is included in the card payment on <strong>${esc(txDateLabel(d.purchasePaymentDate))}</strong>.</p>`:''}${(d.dataWarnings||[]).map(w=>`<p class="payroll-warning">${esc(w)}</p>`).join('')}${d.balanceDate?`<p class="muted">Chequing balance includes recorded activity through ${esc(txDateLabel(d.includedThrough||d.balanceDate))}.</p>`:''}${d.unscheduledCards.map(c=>`<p class="payroll-warning">${esc(c.name)}: ${esc(c.reason)}</p>`).join('')}${d.cardPayments.some(c=>c.estimated)?'<p class="muted">Some statement amounts are estimated: the full current card balance is reserved conservatively. Update actual statements in card settings.</p>':''}${d.unassignedBills?'<p class="payroll-warning">Some recurring bills have no payment account and are not included. Assign them or include them in your saved plan.</p>':''}${fundsChart(d,!baseline)}${d.confirmedForecasts.length?`<p class="muted">Recorded-deposit overlaps removed conservatively: ${d.confirmedForecasts.map(r=>esc(r.label)+' ('+esc(txDateLabel(r.date))+')').join(', ')}.</p>`:''}<details><summary>Cash timeline</summary><div class="payroll-table-scroll"><table><thead><tr><th>Date</th><th>Payment or deposit</th><th>Amount</th></tr></thead><tbody>${d.events.map(e=>`<tr><td>${esc(txDateLabel(e.date))}</td><td>${esc(e.label)}${e.kind==='Card payment'?`<small class="fund-cycle-note">${e.estimated?'Estimated card payment':'Recorded statement amount'}</small>${e.parts?.length?`<details><summary>Statement breakdown</summary>${e.parts.map(part=>`<div>${esc(part.label)} · ${money(part.amount)}</div>`).join('')}</details>`:''}`:''}</td><td>${money(e.amount)}</td></tr>`).join('')}</tbody></table></div></details><p class="muted">Expected pay and transfers are estimates. Statements may shift; interest and late fees are not calculated. Same-day withdrawals are tested before deposits. Purchases are not recorded by this check.</p>`;bindFundsChart($('fcQuickResults'),d,!baseline);}catch(e){if(run===fundsQuickRun)$('fcQuickStatus').textContent=e.message;}finally{if(run===fundsQuickRun)setFundsButtonsDisabled(!fundsSavedSetup);}
+}
+$('fcBaselineBtn').onclick=refreshFundsForecast;
+$('fcForecastDays').onchange=refreshFundsForecast;
+$('fcPurchaseAccount').onchange=()=>{if(Number($('fcQuickAmount').value)>0)refreshFundsForecast();};
+$('fcQuickAmount').oninput=()=>{
+ clearTimeout(fundsInputTimer);
+ ++fundsQuickRun;
+ if(!$('fcQuickAmount').validity.valid){
+  $('fcQuickStatus').textContent='Enter a nonnegative amount in dollars and cents.';
+  return;
+ }
+ fundsInputTimer=setTimeout(refreshFundsForecast,320);
+};
+$('quickCheckBtn').onclick=async()=>{
+ const amount=$('quickAmount').value;
+ goView('funds');
+ await initFundPlan();
+ $('fcQuickAmount').value=amount;
+ await refreshFundsForecast();
+};
+
+const previousExtraFundFlow=extraFundFlow;extraFundFlow=function(incoming=false){previousExtraFundFlow(incoming);const row=$('fcExtraFlows').lastElementChild;if(!incoming){row.dataset.kind='outgoing';row.querySelector('[data-flow-amount]').min='.01';row.querySelector('[data-flow-amount]').placeholder='Amount to send';}row.querySelector('button').onclick=()=>{row.remove();dirtyFundsSetup();};dirtyFundsSetup();};
+$('fcAddIncoming').onclick=()=>extraFundFlow(true);$('fcAddExtra').textContent='＋ Planned transfer out';$('fcAddExtra').onclick=()=>extraFundFlow(false);
+$('accountDialog').addEventListener('close',()=>{if(fundsToolVisible()){refreshFundsForecast();}});
+
+const previousRenderFundCards=renderFundCards;
+let fundCardStatusRevision=0;
+renderFundCards=function(){
+ previousRenderFundCards();
+ const host=$('fcCards'),accountId=$('fcAccount').value,revision=++fundCardStatusRevision;
+ host.querySelectorAll('.fund-card-setup .formgrid,.fund-card-setup small').forEach(element=>element.hidden=true);
+ if(!accountId)return;
+ for(const row of host.querySelectorAll('.fund-card-setup')){
+  const label=document.createElement('p');label.className='fund-cycle-note';label.textContent='Checking statement…';row.append(label);
+ }
+ api('/api/funds-card-status?accountId='+encodeURIComponent(accountId)+'&date='+localToday()).then(({items})=>{
+  if(revision!==fundCardStatusRevision)return;
+  for(const {id,cycle} of items){
+   const row=[...host.querySelectorAll('[data-fund-card]')].find(el=>el.dataset.fundCard===id),label=row?.querySelector('.fund-cycle-note');
+   if(!label)continue;
+   label.textContent=!cycle?'Statement dates needed':cycle.mode==='conservative'
+    ?money(cycle.statementRemaining)+' reserved from current balance · statement amount unconfirmed'
+    :cycle.statementRemaining>0
+     ?money(cycle.statementRemaining)+(cycle.estimated?' estimated':' remaining')+' · due '+txDateLabel(cycle.paymentDueDate)
+     :'$0 remaining on the last statement';
+   if(cycle&&cycle.unbilled>0)label.textContent+=' · '+money(cycle.unbilled)+' unbilled';
+  }
+ }).catch(error=>{
+  if(revision===fundCardStatusRevision)host.querySelectorAll('.fund-cycle-note').forEach(label=>label.textContent=error.message);
+ });
+};
+$('fcCardSetup').querySelector('summary').textContent='Cards paid from this account';
+$('fcCardSetup').querySelector('p.muted').textContent='Current statement status. Scheduled card charges only enter the cash forecast when the card payment is due.';
+const fundAdvanced=document.createElement('details');
+fundAdvanced.className='fund-advanced';
+fundAdvanced.innerHTML='<summary>Purchase defaults and everyday spending</summary>';
+fundAdvanced.append(fundsSettings.querySelector('.funds-purchase'));
+for(const id of ['fcDailySpend','fcDailyPayWith'])fundAdvanced.append($(id).closest('label'));
+$('fcCardSetup').after(fundAdvanced);
+
+$('fcOpening').readOnly=true;$('fcAsOf').readOnly=true;const editCash=document.createElement('button');editCash.type='button';editCash.className='text-action';editCash.textContent='Update chequing balance or owner';editCash.onclick=()=>openAccountEditor(fundPlanAccounts.find(a=>a.id===$('fcAccount').value));$('fcBalanceNote').after(editCash);
+if(!$('view-funds').classList.contains('hidden')&&signedInUser)initFundPlan().then(refreshFundsForecast).catch(e=>$('fcQuickStatus').textContent=e.message);
+
+const previousUsePayrollForFunds=$('fcUsePayroll').onclick;$('fcUsePayroll').onclick=async()=>{await previousUsePayrollForFunds();dirtyFundsSetup();};

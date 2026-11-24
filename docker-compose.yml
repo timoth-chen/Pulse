@@ -1,0 +1,16 @@
+services:
+  finance:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - PORT=8080
+      - CARDOG_API_KEY=${CARDOG_API_KEY:-}
+      - MARKETCHECK_API_KEY=${MARKETCHECK_API_KEY:-}
+      - PULSE_SECURE_COOKIES=${PULSE_SECURE_COOKIES:-false}
+      - ALPHAVANTAGE_API_KEY=${ALPHAVANTAGE_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4.1-mini}
+    restart: unless-stopped

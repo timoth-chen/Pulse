@@ -1,0 +1,8 @@
+(function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory();else root.PulseBudgetExpenseSections=factory();})(typeof globalThis!=='undefined'?globalThis:this,function(){
+ const kinds=['Fixed','Flexible','Non-monthly'],round=n=>Math.round((Number(n)+Number.EPSILON)*100)/100;
+ function sections(families){return kinds.map(kind=>{const fragments=[];for(const f of families.filter(f=>f.type==='expense')){const capKind=f.parent?.group||'Flexible',hasCap=!!f.parent&&capKind===kind,children=(f.children||[]).filter(c=>(c.group||capKind)===kind),assigned=children.filter(c=>!c.unplanned),unallocated=hasCap?Math.max(0,Number(f.unallocated||0)):0;if(!children.length&&!hasCap&&!(kind==='Flexible'&&!f.parent&&!f.children?.length))continue;
+ const planned=round(assigned.reduce((n,c)=>n+Number(c.planned||0),0)+unallocated),actual=round(children.reduce((n,c)=>n+Number(c.actual||0),0)),carry=round(f.parent?(hasCap?Number(f.carry||0):0):assigned.reduce((n,c)=>n+Number(c.carry||0),0)),available=round(planned+carry);
+ fragments.push({...f,key:(f.key||[f.person,f.type,f.group].join('\0'))+'\0plan:'+kind,originalKey:f.key,planSection:kind,allCategories:(f.children||[]).map(c=>c.category),children,parent:null,capMeta:hasCap?{parent:f.parent,total:f.planned,group:f.group,person:f.person,type:f.type}:null,planned,actual,carry,available,remaining:round(available-actual),unallocated,kind,hideEmpty:kind!=='Flexible'&&!hasCap});}
+ const planned=round(fragments.reduce((n,f)=>n+f.planned,0)),actual=round(fragments.reduce((n,f)=>n+f.actual,0)),available=round(fragments.reduce((n,f)=>n+f.available,0));return {kind,families:fragments,planned,actual,available,remaining:round(available-actual)};});}
+ return {sections,kinds};
+});
