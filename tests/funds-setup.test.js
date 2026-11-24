@@ -10,7 +10,17 @@ test('old one-time transfers expire, anchors roll to latest statement conservati
 test('rolling a card cycle also rolls its statement issue date',()=>{const d=db(),s=validate(setup(),d),card=d.accounts[1];card.statementCloseDate='2026-10-20';card.statementIssueDate='2026-11-03';card.paymentDueDate='2026-11-12';const p=prepare(d,s,'2026-11-23');assert.deepEqual(p.input.cards[0],{id:'cc',statementCloseDate:'2026-11-20',statementIssueDate:'2026-12-03',paymentDueDate:'2026-12-12',statementBalance:null,cycleEstimated:true});assert.doesNotThrow(()=>project(d,p.account,{...p.input,amount:0}));});
 test('a loan payment before expected pay reports the first negative date and cause',()=>{const d=db();d.loans=[{id:'loan',name:'Car payment',balance:5000,monthlyPayment:2500,nextDueDate:'2026-11-10',payFromAccountId:'a'}];const s=validate({...setup(),extra:[],charges:[]},d),p=prepare(d,s,'2026-11-08'),r=project(d,p.account,{...p.input,amount:0});assert.equal(r.firstNegative.date,'2026-11-10');assert.equal(r.firstNegative.label,'Car payment');assert.equal(r.firstNegative.balance,-500);assert.equal(r.canAfford,false);});
 test('invalid setup, fees and foreign cards are rejected',()=>{const d=db();assert.throws(()=>validate({...setup(),days:5},d),/30/);assert.throws(()=>validate({...setup(),charges:[{...setup().charges[0],feePercent:101}]},d),/fee/);assert.throws(()=>validate({...setup(),cardId:'foreign'},d),/Select a card/);});
-test('combined and partial partner deposits do not count both the receipt and the entire expected repayment',()=>{const d=db();d.accounts[0].balanceAsOf='2026-11-07';d.transactions=[{id:'combined',account:'Chequing',date:'2026-11-08',merchant:'Partner e-transfer',amount:950}];const s=validate({...setup(),incomeAmount:0,extra:[{label:'Rent half',date:'2026-11-08',amount:900,kind:'incoming'},{label:'Utilities half',date:'2026-11-08',amount:100,kind:'incoming'}],charges:[]},d);let p=prepare(d,s,'2026-11-08');assert.equal(p.input.extra.reduce((n,r)=>n+r.amount,0),50);assert.equal(project(d,p.account,{...p.input,amount:0}).startingBalance,2950);d.transactions[0].amount=1000;p=prepare(d,s,'2026-11-08');assert.equal(p.input.extra.length,0);});
+test('combined and partial partner deposits do not count both the receipt and the entire expected repayment',()=>{const d=db();d.accounts[0].balanceAsOf='2026-11-07';d.transactions=[{id:'combined',account:'Chequing',date:'2026-11-08',merchant:'Partner e-transfer',amount:950}];const s=validate({...setup(),incomeAmount:0,extra:[{label:'Partner e-transfer rent half',date:'2026-11-08',amount:900,kind:'incoming'},{label:'Partner e-transfer utilities half',date:'2026-11-08',amount:100,kind:'incoming'}],charges:[]},d);let p=prepare(d,s,'2026-11-08');assert.equal(p.input.extra.reduce((n,r)=>n+r.amount,0),50);assert.equal(project(d,p.account,{...p.input,amount:0}).startingBalance,2950);d.transactions[0].amount=1000;p=prepare(d,s,'2026-11-08');assert.equal(p.input.extra.length,0);});
+
+test('an unrelated deposit does not cancel expected salary',()=>{
+ const data=db();
+ data.accounts[0].balanceAsOf='2026-11-13';
+ data.transactions.push({id:'refund',account:'Chequing',date:'2026-11-20',merchant:'Store refund',amount:2400});
+ const saved=validate({...setup(),incomeDate:'2026-11-06',extra:[],charges:[]},data);
+ const {input,confirmed}=prepare(data,saved,'2026-11-21');
+ assert.equal(confirmed.length,0);
+ assert.equal(input.extra.find(row=>row.awaitingImport).amount,2400);
+});
 
 test('Funds Check applies an imported partial statement payment exactly once',()=>{
  const data=db();
@@ -25,4 +35,29 @@ test('Funds Check applies an imported partial statement payment exactly once',()
  const {account,input}=prepare(data,saved,'2026-11-08');
  const result=project(data,account,{...input,amount:0});
  assert.equal(result.cardPayments[0].statementRemaining,800);
+});
+
+test('a $409.22 intraday low can coexist with a $2,809.22 closing balance on an unimported payday',()=>{
+ const data=db();
+ data.accounts[0].balance=909.22;
+ data.accounts[0].balanceAsOf='2026-11-13';
+ const saved=validate({...setup(),incomeDate:'2026-11-06',extra:[],charges:[]},data);
+ const before=JSON.stringify(data);
+ const {account,input}=prepare(data,saved,'2026-11-23');
+ const result=project(data,account,{...input,amount:0});
+ assert.equal(result.minimum,409.22);
+ assert.equal(result.timeline[0].balance,2809.22);
+ assert.equal(input.extra.find(row=>row.awaitingImport).expectedDate,'2026-11-20');
+ assert.equal(JSON.stringify(data),before);
+});
+
+test('a newer balance snapshot does not add the prior scheduled salary again',()=>{
+ const data=db();
+ data.accounts[0].balance=3309.22;
+ data.accounts[0].balanceAsOf='2026-11-21';
+ const saved=validate({...setup(),incomeDate:'2026-11-06',extra:[],charges:[]},data);
+ const {account,input}=prepare(data,saved,'2026-11-23');
+ const result=project(data,account,{...input,amount:0});
+ assert.equal(input.extra.some(row=>row.awaitingImport),false);
+ assert.equal(result.startingBalance,3309.22);
 });
