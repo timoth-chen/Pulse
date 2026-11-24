@@ -10,6 +10,9 @@ const profile = fs.readFileSync(path.join(root, 'public/profile-arrival.js'), 'u
 const design = fs.readFileSync(path.join(root, 'public/pulse-design.css'), 'utf8');
 const app = fs.readFileSync(path.join(root, 'public/app.js'), 'utf8');
 const sw = fs.readFileSync(path.join(root, 'public/sw.js'), 'utf8');
+const html = fs.readFileSync(path.join(root, 'public/index.html'), 'utf8');
+const calendar = fs.readFileSync(path.join(root, 'public/cash-calendar.js'), 'utf8');
+const routes = fs.readFileSync(path.join(root, 'lib/funds-setup-routes.js'), 'utf8');
 
 test('Funds Check keeps the interactive forecast decision tools', () => {
   for (const capability of [
@@ -48,7 +51,7 @@ test('profile arrival protects previous financial data and respects reduced moti
 test('Slate and Indigo browser chrome and fresh service worker are configured', () => {
   assert.match(app, /'#151722'\s*:\s*'#f5f6fa'/);
   assert.match(app, /updateViaCache:'none'/);
-  assert.match(sw, /household-finance-v221/);
+  assert.match(sw, /household-finance-v222/);
 });
 
 test('dashboard Funds Check owns one in-place interactive scenario flow', () => {
@@ -59,6 +62,18 @@ test('dashboard Funds Check owns one in-place interactive scenario flow', () => 
   assert.match(quick, /event\.key==='Enter'/);
   assert.doesNotMatch(plan, /\$\('quickCheckBtn'\)\.onclick/);
   assert.doesNotMatch(app, /\$\('quickCheckBtn'\)\.onclick/);
+  assert.doesNotMatch(calendar, /dashboardFundsPlot|renderDashboardFundsPlot/);
+  assert.match(html, /<option value="30" selected>Next 30 days<\/option>/);
+  assert.match(html, /<option value="365">Next year<\/option>/);
+  assert.match(routes, /days>365/);
+});
+
+test('dashboard dates share the compact header without changing forecast dates', () => {
+  assert.match(html, /id="dashboardRangePreset"/);
+  assert.match(html, /Last 30 days/);
+  assert.match(html, /Last 12 months/);
+  assert.match(app, /dashboardPresetDates/);
+  assert.doesNotMatch(app.match(/function dashboardQuery\(\)[^\n]+/)[0], /dashboardFunds/);
 });
 
 test('forecast chart uses stepped balances and on-line semantic markers', () => {

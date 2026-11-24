@@ -23,7 +23,7 @@ $('themeLight').onclick = () => applyTheme('light');
 $('themeDark').onclick = () => applyTheme('dark');
 applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
 const dashboardToday=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Toronto'}).format(new Date());
-let range=(()=>{try{const saved=localStorage.getItem('pulse-dashboard-period');return ['day','week','month','quarter','year','custom'].includes(saved)?saved:'month';}catch{return 'month';}})(),anchor=dashboardToday(),accountsCache=[];
+let dashboardPreset=(()=>{try{const saved=localStorage.getItem('pulse-dashboard-period');return ['day','week','month','last-month','last-30','quarter','year','last-12','custom'].includes(saved)?saved:'month';}catch{return 'month';}})(),range=['last-month','last-30','last-12','custom'].includes(dashboardPreset)?'custom':dashboardPreset,anchor=dashboardToday(),accountsCache=[];
 
 async function api(url, opts={}) {
   const original=url,version=ownerScopeVersion;
@@ -216,13 +216,20 @@ new ResizeObserver(()=>{
 }).observe($('dTrend'));
 
 function dashboardQuery(){const custom=range==='custom'?`&from=${encodeURIComponent($('dashboardFrom').value)}&to=${encodeURIComponent($('dashboardTo').value)}`:'';return `/api/dashboard?range=${range}&date=${anchor}${custom}`;}
-function selectDashboardRange(next){range=next;try{localStorage.setItem('pulse-dashboard-period',range);}catch{}document.querySelectorAll('.rangeBtn').forEach(x=>x.classList.toggle('active',x.dataset.range===range));$('customPeriodFields').classList.toggle('hidden',range!=='custom');}
-document.querySelectorAll('.rangeBtn').forEach(b=>b.onclick=()=>{selectDashboardRange(b.dataset.range);if(range!=='custom')loadDashboard();});
+function dashboardPresetDates(preset,date=dashboardToday()){
+ const end=date,day=value=>new Date(value+'T12:00:00Z'),iso=value=>value.toISOString().slice(0,10);
+ if(preset==='last-30')return {from:iso(new Date(day(end)-29*86400000)),to:end};
+ if(preset==='last-12'){const from=day(end);from.setUTCFullYear(from.getUTCFullYear()-1);from.setUTCDate(from.getUTCDate()+1);return {from:iso(from),to:end};}
+ if(preset==='last-month'){const current=day(end),from=new Date(Date.UTC(current.getUTCFullYear(),current.getUTCMonth()-1,1)),to=new Date(Date.UTC(current.getUTCFullYear(),current.getUTCMonth(),0));return {from:iso(from),to:iso(to)};}
+ return null;
+}
+function selectDashboardRange(next){dashboardPreset=next;range=['last-month','last-30','last-12','custom'].includes(next)?'custom':next;try{localStorage.setItem('pulse-dashboard-period',dashboardPreset);}catch{}$('dashboardRangePreset').value=dashboardPreset;const dates=dashboardPresetDates(dashboardPreset);if(dates){$('dashboardFrom').value=dates.from;$('dashboardTo').value=dates.to;}$('customPeriodFields').classList.toggle('hidden',dashboardPreset!=='custom');}
+$('dashboardRangePreset').onchange=()=>{selectDashboardRange($('dashboardRangePreset').value);loadDashboard();};
 async function moveDashboardPeriod(direction){if(range==='custom'){const from=$('dashboardFrom').value,to=$('dashboardTo').value,days=Math.round((Date.parse(to)-Date.parse(from))/86400000)+1;if(!Number.isFinite(days)||days<1)return;const shift=direction*days;$('dashboardFrom').value=new Date(Date.parse(from)+shift*86400000).toISOString().slice(0,10);$('dashboardTo').value=new Date(Date.parse(to)+shift*86400000).toISOString().slice(0,10);return loadDashboard();}const d=await api(dashboardQuery());anchor=direction<0?d.prevAnchor:d.nextAnchor;return loadDashboard();}
 $('prevBtn').onclick=()=>moveDashboardPeriod(-1);$('nextBtn').onclick=()=>moveDashboardPeriod(1);
-$('currentPeriodBtn').onclick=()=>{anchor=dashboardToday();if(range==='custom'){const end=anchor,start=new Date(Date.parse(end)-29*86400000).toISOString().slice(0,10);$('dashboardFrom').value=start;$('dashboardTo').value=end;}loadDashboard();};
+$('currentPeriodBtn').onclick=()=>{anchor=dashboardToday();const dates=dashboardPresetDates(dashboardPreset,anchor);if(dates){$('dashboardFrom').value=dates.from;$('dashboardTo').value=dates.to;}else if(range==='custom'){const end=anchor,start=new Date(Date.parse(end)-29*86400000).toISOString().slice(0,10);$('dashboardFrom').value=start;$('dashboardTo').value=end;}loadDashboard();};
 $('applyDashboardPeriod').onclick=loadDashboard;
-{const end=dashboardToday(),start=new Date(Date.parse(end)-29*86400000).toISOString().slice(0,10);$('dashboardFrom').value=start;$('dashboardTo').value=end;selectDashboardRange(range);}
+{const end=dashboardToday(),start=new Date(Date.parse(end)-29*86400000).toISOString().slice(0,10);$('dashboardFrom').value=start;$('dashboardTo').value=end;selectDashboardRange(dashboardPreset);}
 async function loadDashboard(){
   const d=await api(dashboardQuery());
   if(range!=='custom')anchor=d.period.start;

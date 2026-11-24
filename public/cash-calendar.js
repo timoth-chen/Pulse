@@ -361,38 +361,15 @@ async function openCalendarTransfer(existing,setDate=false){
  };
 };
 
-let dashboardForecastRequest=0,dashboardForecast=null;
-function renderDashboardFundsPlot(){
- const plot=$('dashboardFundsPlot');
- if(!plot||!dashboardForecast||!plot.clientWidth)return;
- const width=Math.max(240,plot.clientWidth);
- if(plot.querySelector('svg')?.viewBox.baseVal.width===width)return;
- plot.innerHTML=fundsChart(dashboardForecast,false,{compact:true,width});
- bindFundsChart(plot,dashboardForecast);
-}
-new ResizeObserver(renderDashboardFundsPlot).observe($('quickCoverage'));
 async function loadDashboardForecast(){
  if($('view-dashboard').classList.contains('hidden')||!signedInUser)return;
- const request=++dashboardForecastRequest,scope=fundsScopeQuery();
  const host=$('quickCoverage');
  try{
   const {setup}=await api('/api/funds-setup');
-  if(request!==dashboardForecastRequest||scope!==fundsScopeQuery())return;
-  if(!setup){dashboardForecast=null;host.innerHTML='<p class="muted">Open Funds Check to set up your cash forecast.</p>';return;}
-  const data=await post('/api/funds-setup/check'+scope,{amount:0,date:localToday(),days:setup.days});
-  if(request!==dashboardForecastRequest||scope!==fundsScopeQuery())return;
-  dashboardForecast=data;
-  host.innerHTML=`<div class="dashboard-cash-preview">
-  <div class="dashboard-cash-metrics">
-   <div><strong>${money(data.minimum)}</strong><span>Lowest balance · ${esc(txDateLabel(data.minimumDate))}</span></div>
-   <div><strong>${money(data.endBalance)}</strong><span>End balance · ${esc(txDateLabel(data.end))}</span></div>
-  </div>
-  ${data.firstAtOrBelowZero?`<small>Cash reaches zero or below on ${esc(txDateLabel(data.firstAtOrBelowZero.date))}.</small>`:''}
-  ${!data.complete?'<small>Some forecast details still need review.</small>':''}
-  </div><div id="dashboardFundsPlot"></div>
-  <div class="dashboard-funds-key"><span>${data.buffer>0?'At or above buffer':'Above zero'}</span>${data.buffer>0?'<span>Below buffer</span>':''}<span>Zero or below</span></div>`;
-  renderDashboardFundsPlot();
- }catch(error){if(request===dashboardForecastRequest)$('quickCheckMsg').textContent=error.message;}
+  if(!setup){host.innerHTML='<p class="muted">Open Funds Check to set up your cash forecast.</p>';return;}
+  host.replaceChildren();
+  if(typeof runDashboardFundsCheck==='function')await runDashboardFundsCheck(!(Number($('quickAmount').value)>0));
+ }catch(error){$('quickCheckMsg').textContent=error.message;}
 }
 const beforeCalendarDashboard=loadDashboard;
 loadDashboard=async function(){await beforeCalendarDashboard();await loadDashboardForecast();};

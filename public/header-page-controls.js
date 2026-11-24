@@ -9,6 +9,7 @@ function headerControl(view,selector,side='left'){
  pageHeaderEntries.push({view,node,home,target:side==='left'?pageHeaderLeft:pageHeaderRight});
 }
 headerControl('cashflow','#cashflowPeriod');
+headerControl('dashboard','.dashboard-period');
 headerControl('cashflow','.cashflow-toolbar>.filter-popover','right');
 headerControl('budgets','.budget-workspace-toolbar>.row:first-child');
 headerControl('budgets','.budget-workspace-toolbar>.row:last-child','right');
