@@ -76,6 +76,7 @@
       <div class="card highlight dashboard-funds"><div class="widget-head"><div><span class="eyebrow">Forward cash position</span><h3>Funds Check</h3><p class="muted">Test a purchase without changing transactions or saved assumptions.</p></div><button id="dashboardFundsAdvanced" class="text-action">Advanced setup</button></div><div id="quickCoverage"></div>
         <div class="dashboard-funds-controls"><label>Purchase total · CAD<input id="quickAmount" class="currency-input" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"/></label><label>Purchase date<input id="dashboardFundsDate" type="date"/></label><label>Pay with<select id="dashboardFundsAccount"></select></label><div class="dashboard-funds-actions"><button id="quickCheckBtn" class="primary">Check Funds</button><button id="dashboardFundsReset" class="ghost">Reset</button></div></div>
         <p id="quickCheckMsg" class="msg" role="status"></p><div id="dashboardFundsResults" aria-live="polite"></div></div>
+      <section class="card dashboard-outlook"><div class="widget-head"><div><span class="eyebrow">Current month</span><h3>Spending pace and outlook</h3></div><button id="outlookBudget" class="text-action">View budget</button></div><div id="dashboardOutlook"></div></section>
       <div class="cards dashboard-summary">
         <div class="card stat"><span>Income</span><strong id="dIncome">$0</strong></div>
         <div class="card stat"><span>Spending</span><strong id="dSpending">$0</strong></div>
@@ -94,6 +95,7 @@
       </div>
       <div class="card"><h3>Income & spending over time</h3><div id="dTrend"></div></div>
       <div class="card"><h3>This month’s budgets</h3><div id="dBudgets"></div></div>
+      <section class="card dashboard-attention"><div class="widget-head"><div><span class="eyebrow">Reviewable signals</span><h3>Financial attention</h3></div></div><div id="dashboardAttention"></div></section>
       <div class="card"><h3>Largest expenses in period</h3><div id="dLargest"></div></div>
       <div id="emptyState" class="card hidden"><h3>No data yet</h3>
         <p>Import a bank CSV, add transactions, or try everything instantly with fake data:</p>
