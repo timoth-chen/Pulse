@@ -22,7 +22,8 @@ function applyTheme(theme) {
 $('themeLight').onclick = () => applyTheme('light');
 $('themeDark').onclick = () => applyTheme('dark');
 applyTheme(document.documentElement.getAttribute('data-theme') || 'dark');
-let range='month', anchor=new Date().toISOString().slice(0,10), accountsCache=[];
+const dashboardToday=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Toronto'}).format(new Date());
+let range=(()=>{try{const saved=localStorage.getItem('pulse-dashboard-period');return ['day','week','month','quarter','year','custom'].includes(saved)?saved:'month';}catch{return 'month';}})(),anchor=dashboardToday(),accountsCache=[];
 
 async function api(url, opts={}) {
   const original=url,version=ownerScopeVersion;
@@ -214,13 +215,18 @@ new ResizeObserver(()=>{
  if(width&&chart&&chart.viewBox.baseVal.width!==Math.max(240,width))renderDashboardTrend(dashboardTrendRows);
 }).observe($('dTrend'));
 
-document.querySelectorAll('.rangeBtn').forEach(b=>b.onclick=()=>{ range=b.dataset.range; document.querySelectorAll('.rangeBtn').forEach(x=>x.classList.toggle('active',x===b)); loadDashboard(); });
-$('prevBtn').onclick=async()=>{ const d=await api(`/api/dashboard?range=${range}&date=${anchor}`); anchor=d.prevAnchor; loadDashboard(); };
-$('nextBtn').onclick=async()=>{ const d=await api(`/api/dashboard?range=${range}&date=${anchor}`); anchor=d.nextAnchor; loadDashboard(); };
+function dashboardQuery(){const custom=range==='custom'?`&from=${encodeURIComponent($('dashboardFrom').value)}&to=${encodeURIComponent($('dashboardTo').value)}`:'';return `/api/dashboard?range=${range}&date=${anchor}${custom}`;}
+function selectDashboardRange(next){range=next;try{localStorage.setItem('pulse-dashboard-period',range);}catch{}document.querySelectorAll('.rangeBtn').forEach(x=>x.classList.toggle('active',x.dataset.range===range));$('customPeriodFields').classList.toggle('hidden',range!=='custom');}
+document.querySelectorAll('.rangeBtn').forEach(b=>b.onclick=()=>{selectDashboardRange(b.dataset.range);if(range!=='custom')loadDashboard();});
+async function moveDashboardPeriod(direction){if(range==='custom'){const from=$('dashboardFrom').value,to=$('dashboardTo').value,days=Math.round((Date.parse(to)-Date.parse(from))/86400000)+1;if(!Number.isFinite(days)||days<1)return;const shift=direction*days;$('dashboardFrom').value=new Date(Date.parse(from)+shift*86400000).toISOString().slice(0,10);$('dashboardTo').value=new Date(Date.parse(to)+shift*86400000).toISOString().slice(0,10);return loadDashboard();}const d=await api(dashboardQuery());anchor=direction<0?d.prevAnchor:d.nextAnchor;return loadDashboard();}
+$('prevBtn').onclick=()=>moveDashboardPeriod(-1);$('nextBtn').onclick=()=>moveDashboardPeriod(1);
+$('currentPeriodBtn').onclick=()=>{anchor=dashboardToday();if(range==='custom'){const end=anchor,start=new Date(Date.parse(end)-29*86400000).toISOString().slice(0,10);$('dashboardFrom').value=start;$('dashboardTo').value=end;}loadDashboard();};
+$('applyDashboardPeriod').onclick=loadDashboard;
+{const end=dashboardToday(),start=new Date(Date.parse(end)-29*86400000).toISOString().slice(0,10);$('dashboardFrom').value=start;$('dashboardTo').value=end;selectDashboardRange(range);}
 async function loadDashboard(){
-  const d=await api(`/api/dashboard?range=${range}&date=${anchor}`); anchor=d.period.start===''+anchor?anchor:anchor;
-  if(range==='month') anchor=d.period.start; if(range==='year') anchor=d.period.start; if(range==='week') anchor=d.period.start; if(range==='day') anchor=d.period.start;
-  $('periodLabel').textContent=d.period.label + (range==='week'?'':` (${d.period.start} → ${d.period.end})`);
+  const d=await api(dashboardQuery());
+  if(range!=='custom')anchor=d.period.start;
+  $('periodLabel').textContent=d.period.label;
   let statementNotice=$('homeBillStatementNotice');if(!statementNotice){statementNotice=document.createElement('div');statementNotice.id='homeBillStatementNotice';statementNotice.className='card bill-statement-notice';$('view-dashboard').prepend(statementNotice);}statementNotice.classList.toggle('hidden',!d.statementReviews?.length);statementNotice.innerHTML=d.statementReviews?.length?`<span><strong>${d.statementReviews.length} bill statement${d.statementReviews.length===1?'':'s'} to check</strong><small>${d.statementReviews.map(r=>esc(r.name)).join(', ')} · review amounts before Chexy charges</small></span><button id="openStatementReviewBills">Review bills</button>`:'';if($('openStatementReviewBills'))$('openStatementReviewBills').onclick=()=>goView('bills');
   $('dIncome').textContent=money(d.income); $('dSpending').textContent=money(d.spending); $('dNet').textContent=money(d.net);
   $('dSavings').textContent=d.income? d.savingsRate+'%':'—';
@@ -265,8 +271,6 @@ async function doFundsCheck(amountInput, accountSel, msgEl){
   }catch(e){ $(msgEl).textContent=e.message; }
 }
 $('fcBtn').onclick=()=>doFundsCheck('fcAmount','fcAccount','fcMsg');
-$('quickCheckBtn').onclick=async()=>{ const chq=accountsCache.find(a=>a.type==='checking'); if(!chq){ $('quickCheckMsg').textContent='Add a chequing account first (Accounts).'; return; }
-  $('fcAccount').value=chq.id; $('fcAmount').value=$('quickAmount').value; await doFundsCheck('quickAmount','fcAccount','quickCheckMsg'); };
 
 // ---------- transactions ----------
 $('txDate').value=new Date().toISOString().slice(0,10);

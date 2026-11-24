@@ -48,7 +48,25 @@ test('profile arrival protects previous financial data and respects reduced moti
 test('Slate and Indigo browser chrome and fresh service worker are configured', () => {
   assert.match(app, /'#151722'\s*:\s*'#f5f6fa'/);
   assert.match(app, /updateViaCache:'none'/);
-  assert.match(sw, /household-finance-v220/);
+  assert.match(sw, /household-finance-v221/);
+});
+
+test('dashboard Funds Check owns one in-place interactive scenario flow', () => {
+  assert.equal((quick.match(/\$\('quickCheckBtn'\)\.onclick/g)||[]).length, 1);
+  assert.match(quick, /runDashboardFundsCheck/);
+  assert.match(quick, /dashboardFundsDays/);
+  assert.match(quick, /dashboardFundsReset/);
+  assert.match(quick, /event\.key==='Enter'/);
+  assert.doesNotMatch(plan, /\$\('quickCheckBtn'\)\.onclick/);
+  assert.doesNotMatch(app, /\$\('quickCheckBtn'\)\.onclick/);
+});
+
+test('forecast chart uses stepped balances and on-line semantic markers', () => {
+  assert.match(plan, /H\$\{x\(index\)\}V\$\{y\(row\.balance\)\}/);
+  assert.match(plan, /funds-balance-purchase/);
+  assert.match(plan, /markerLimit/);
+  assert.match(plan, /cy="\$\{y\(row\.balance\)\}"/);
+  assert.doesNotMatch(plan, /y2="\$\{plotHeight\+25\}"/);
 });
 
 test('quick purchase assumptions refresh the prominent forecast', () => {

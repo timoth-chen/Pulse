@@ -79,22 +79,30 @@ const publicUser = u => ({ id: u.id, name: u.name, email: u.email });
 // ---------- dates / periods ----------
 function addDays(d, n) { const x = new Date(d + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); }
 function addMonths(d, n) { const x = new Date(d + 'T00:00:00Z'); x.setUTCMonth(x.getUTCMonth() + n); return x.toISOString().slice(0, 10); }
-function periodFor(range, anchor) {
+const periodDateLabel=date=>new Intl.DateTimeFormat('en-CA',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'}).format(new Date(date+'T12:00:00Z'));
+function periodFor(range, anchor, customFrom='', customTo='') {
   const a = anchor || todayStr();
-  if (range === 'day') return { range, start: a, end: a, label: a };
+  if(range==='custom'){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(customFrom)||!/^\d{4}-\d{2}-\d{2}$/.test(customTo)||customFrom>customTo)throw Error('Choose a valid custom date range.');
+    if((Date.parse(customTo)-Date.parse(customFrom))/86400000>3660)throw Error('Custom dashboard ranges can cover at most ten years.');
+    return {range,start:customFrom,end:customTo,label:periodDateLabel(customFrom)+'–'+periodDateLabel(customTo)};
+  }
+  if (range === 'day') return { range, start: a, end: a, label: periodDateLabel(a) };
   if (range === 'week') {
     const dow = new Date(a + 'T00:00:00Z').getUTCDay(); // 0 Sun
     const mondayOffset = (dow + 6) % 7;
     const start = addDays(a, -mondayOffset), end = addDays(start, 6);
-    return { range, start, end, label: `Week of ${start} to ${end} (Mon–Sun)` };
+    return { range, start, end, label: `${periodDateLabel(start)}–${periodDateLabel(end)}` };
   }
+  if(range==='quarter'){const month=Number(a.slice(5,7)),quarter=Math.ceil(month/3),start=`${a.slice(0,4)}-${String((quarter-1)*3+1).padStart(2,'0')}-01`,end=addDays(addMonths(start,3),-1);return {range,start,end,label:`Q${quarter} ${a.slice(0,4)}`};}
   if (range === 'year') return { range, start: a.slice(0, 4) + '-01-01', end: a.slice(0, 4) + '-12-31', label: a.slice(0, 4) };
-  return { range: 'month', start: a.slice(0, 7) + '-01', end: addDays(addMonths(a.slice(0, 7) + '-01', 1), -1), label: a.slice(0, 7) };
+  const start=a.slice(0,7)+'-01';return {range:'month',start,end:addDays(addMonths(start,1),-1),label:new Intl.DateTimeFormat('en-CA',{timeZone:'UTC',month:'long',year:'numeric'}).format(new Date(start+'T12:00:00Z'))};
 }
 function shiftAnchor(range, anchor, dir) {
   const a = anchor || todayStr();
   if (range === 'day') return addDays(a, dir);
   if (range === 'week') return addDays(a, dir * 7);
+  if (range === 'quarter') return addMonths(a, dir * 3);
   if (range === 'year') return addMonths(a, dir * 12);
   return addMonths(a, dir);
 }
@@ -570,15 +578,14 @@ function summarise(list,options={}){
 }
 app.get('/api/dashboard', requireAuth, (req, res) => {
   const view=readDb(req);
-  const range = ['day','week','month','year'].includes(req.query.range) ? req.query.range : 'month';
+  const range = ['day','week','month','quarter','year','custom'].includes(req.query.range) ? req.query.range : 'month';
   const anchor = req.query.date || todayStr();
-  const p = periodFor(range, anchor);
+  let p;try{p=periodFor(range,anchor,String(req.query.from||''),String(req.query.to||''));}catch(error){return res.status(400).json({error:error.message});}
   const inPeriod = view.transactions.filter(t => t.date >= p.start && t.date <= p.end);
   const s = summarise(inPeriod);
   const expenseGroups=new Map();
-  const spendingMonth=periodFor('month',anchor);
-  const monthlySpending=range==='month'?s:summarise(view.transactions.filter(t=>t.date>=spendingMonth.start&&t.date<=spendingMonth.end));
-  for(const category of monthlySpending.byCategory){
+  const spendingPeriod=p;
+  for(const category of s.byCategory){
     const group=categoryInfo(category.label,db.categories).group||'Uncategorized';
     expenseGroups.set(group,(expenseGroups.get(group)||0)+Math.round(category.total*100));
   }
@@ -592,12 +599,12 @@ app.get('/api/dashboard', requireAuth, (req, res) => {
     total: round(s.incomeByPerson.filter(p=>p.total>0).reduce((n,p)=>n+p.total,0)+s.byCategory.filter(c=>c.total<0).reduce((n,c)=>n-c.total,0)+deficit) };
   // Trend buckets
   const trend = [];
-  const bucketCount = range === 'day' ? 14 : range === 'week' ? 12 : range === 'year' ? 5 : 12;
+  const trendRange=range==='custom'?'month':range,bucketCount = range === 'day' ? 14 : range === 'week' ? 12 : range === 'quarter' ? 8 : range === 'year' ? 5 : 12;
   for (let i = bucketCount - 1; i >= 0; i--) {
-    const bp = periodFor(range, shiftAnchor(range, anchor, -i));
+    const bp = periodFor(trendRange, shiftAnchor(trendRange, range==='custom'?p.end:anchor, -i));
     const l = view.transactions.filter(t => t.date >= bp.start && t.date <= bp.end);
     const sm = summarise(l);
-    trend.push({ label: range === 'month' ? bp.start.slice(0, 7) : range === 'year' ? bp.start.slice(0, 4) : bp.start, income: sm.income, spending: sm.spending });
+    trend.push({ label: trendRange === 'month' ? bp.start.slice(0, 7) : trendRange === 'year' ? bp.start.slice(0, 4) : bp.start, income: sm.income, spending: sm.spending });
   }
   // Budgets for the anchor month
   const monthKey = anchor.slice(0, 7);
@@ -606,8 +613,9 @@ app.get('/api/dashboard', requireAuth, (req, res) => {
   const budgetRows=budgetWorkspace.flexPoolSummary?require('./public/budget-expense-sections').sections(budgetWorkspace.families).map(section=>({...section,...(section.kind==='Flexible'?budgetWorkspace.flexPoolSummary:{}),key:section.kind,group:section.kind})):budgetWorkspace.families.filter(f=>f.type==='expense');
   const budgets=budgetRows.map(f=>({id:f.key,category:f.group,planned:f.planned,available:f.available,spent:f.actual,remaining:f.remaining,person:f.person})).map(b=>({...b,monthlyLimit:b.available,over:b.spent>b.available}));
   const transfersInPeriod = view.transfers.filter(t => t.date >= p.start && t.date <= p.end);
-  res.json({ period: p, prevAnchor: shiftAnchor(range, anchor, -1), nextAnchor: shiftAnchor(range, anchor, 1),
-    ...s, spendingGroups, spendingMonth, sankey, trend, budgets, budgetMonth: monthKey,statementReviews:require('./lib/bill-schedule').agenda(view,new Intl.DateTimeFormat('en-CA',{timeZone:'America/Toronto'}).format(new Date()),30).upcoming.filter(r=>r.status==='upcoming'&&r.statement?.needsReview).map(r=>({id:r.id,name:r.name,chargeDate:r.date,statementDate:r.statement.date})),
+  const customDays=Math.round((Date.parse(p.end)-Date.parse(p.start))/86400000)+1;
+  res.json({ period: p, prevAnchor:range==='custom'?addDays(p.start,-customDays):shiftAnchor(range,anchor,-1), nextAnchor:range==='custom'?addDays(p.end,1):shiftAnchor(range,anchor,1),
+    ...s, spendingGroups, spendingMonth:spendingPeriod, sankey, trend, budgets, budgetMonth: monthKey,statementReviews:require('./lib/bill-schedule').agenda(view,new Intl.DateTimeFormat('en-CA',{timeZone:'America/Toronto'}).format(new Date()),30).upcoming.filter(r=>r.status==='upcoming'&&r.statement?.needsReview).map(r=>({id:r.id,name:r.name,chargeDate:r.date,statementDate:r.statement.date})),
     transfersMoved: round(transfersInPeriod.reduce((x, t) => x + (Number(t.amount) || 0), 0)),
     partnerBalances: partnerBalances(view.transfers) });
 });

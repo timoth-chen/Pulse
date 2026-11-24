@@ -24,7 +24,7 @@
 <link rel="manifest" href="/manifest.webmanifest"/>
 <title>Pulse — Household finances</title>
 <link rel="stylesheet" href="/styles.css"/>
-<link rel="stylesheet" href="/pulse-design.css?v=222"/>
+<link rel="stylesheet" href="/pulse-design.css?v=223"/>
 </head>
 <body><div id="sidebarHoverEdge" aria-hidden="true"></div><button id="sidebarBackdrop" aria-label="Close navigation" tabindex="-1"></button>
 <header>
@@ -71,21 +71,12 @@
     <div class="page-heading"><div><h2 id="pageTitle">Overview</h2><p id="pageSubtitle" class="muted">Accounts, spending and investments</p></div><div class="page-actions"><button id="downloadTxCsv" class="ghost hidden">Export CSV</button><button id="addActivity" class="primary">Add transaction</button></div></div>
     <!-- DASHBOARD -->
     <div id="view-dashboard">
-      <div class="recap"><div><span class="eyebrow">SMALL STEPS, BIG POSSIBILITIES</span><h3>Your next chapter starts here.</h3><p>Keep an eye on today. Make space for tomorrow.</p></div><button id="recapGoals">Explore savings →</button></div>
+      <div class="dashboard-period" aria-label="Dashboard reporting period"><div class="dashboard-period-ranges" role="group" aria-label="Period"><button class="rangeBtn" data-range="day">Day</button><button class="rangeBtn" data-range="week">Week</button><button class="rangeBtn active" data-range="month">Month</button><button class="rangeBtn" data-range="quarter">Quarter</button><button class="rangeBtn" data-range="year">Year</button><button class="rangeBtn" data-range="custom">Custom</button></div><div class="dashboard-period-nav"><button id="prevBtn" class="icon-button" aria-label="Previous period">←</button><strong id="periodLabel"></strong><button id="nextBtn" class="icon-button" aria-label="Next period">→</button><button id="currentPeriodBtn" class="text-action">Current</button></div><div id="customPeriodFields" class="dashboard-custom-period hidden"><label>From<input id="dashboardFrom" type="date"/></label><label>To<input id="dashboardTo" type="date"/></label><button id="applyDashboardPeriod">Apply</button></div></div>
       <div id="homeWidgets" class="home-widgets"></div>
-      <div class="card highlight"><h3>Funds Check</h3><div id="quickCoverage"></div>
-        <div class="row"><input id="quickAmount" type="number" step="0.01" placeholder="Purchase amount, e.g. 120"/><button id="quickCheckBtn" class="primary">Open Funds Check</button></div>
-        <p id="quickCheckMsg" class="msg"></p></div>
-      <div class="row">
-        <div class="tabs">
-          <button class="tab rangeBtn" data-range="day">Day</button>
-          <button class="tab rangeBtn" data-range="week">Week</button>
-          <button class="tab rangeBtn active" data-range="month">Month</button>
-          <button class="tab rangeBtn" data-range="year">Year</button>
-        </div>
-        <button id="prevBtn">← Prev</button><strong id="periodLabel"></strong><button id="nextBtn">Next →</button>
-      </div>
-      <div class="cards">
+      <div class="card highlight dashboard-funds"><div class="widget-head"><div><span class="eyebrow">Forward cash position</span><h3>Funds Check</h3><p class="muted">Test a purchase without changing transactions or saved assumptions.</p></div><button id="dashboardFundsAdvanced" class="text-action">Advanced setup</button></div><div id="quickCoverage"></div>
+        <div class="dashboard-funds-controls"><label>Purchase total · CAD<input id="quickAmount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00"/></label><label>Purchase date<input id="dashboardFundsDate" type="date"/></label><label>Pay with<select id="dashboardFundsAccount"></select></label><label>Forecast<select id="dashboardFundsDays"><option value="7">7 days</option><option value="14">14 days</option><option value="30">30 days</option><option value="60">60 days</option><option value="90">90 days</option><option value="180">180 days</option><option value="custom">Custom end date</option></select></label><label id="dashboardFundsEndLabel" class="hidden">Forecast ends<input id="dashboardFundsEnd" type="date"/></label><div class="dashboard-funds-actions"><button id="quickCheckBtn" class="primary">Check Funds</button><button id="dashboardFundsReset" class="ghost">Reset</button></div></div>
+        <p id="quickCheckMsg" class="msg" role="status"></p><div id="dashboardFundsResults" aria-live="polite"></div></div>
+      <div class="cards dashboard-summary">
         <div class="card stat"><span>Income</span><strong id="dIncome">$0</strong></div>
         <div class="card stat"><span>Spending</span><strong id="dSpending">$0</strong></div>
         <div class="card stat"><span>Net</span><strong id="dNet">$0</strong></div>
@@ -94,7 +85,7 @@
       <p id="dMeta" class="muted"></p>
       <p id="dTransfers" class="muted"></p>
       <div class="grid">
-        <div class="card"><div class="widget-head"><h3>Your spending mix</h3><small id="spendingMixMonth" class="muted"></small></div><div class="dashboard-spending-content"><div id="pieChart"></div><div id="pieLegend"></div></div></div>
+        <div class="card"><div class="widget-head"><h3>Spending mix</h3><small id="spendingMixMonth" class="muted"></small></div><div class="dashboard-spending-content"><div id="pieChart"></div><div id="pieLegend"></div></div></div>
       </div>
       <div class="card"><h3>Follow the money</h3><p class="muted">Income by person → household → where it went (and what was saved).</p><div id="sankey"></div></div>
       <div class="grid">
@@ -291,13 +282,13 @@
   </section>
 </main>
 <script src="/router.js"></script><script src="/owner-scope.js"></script>
-<script src="/profile-arrival.js"></script><script src="/app.js"></script>
+<script src="/profile-arrival.js"></script><script src="/app.js?v=223"></script>
 <script src="/accounts.js?v=219"></script>
 <script src="/balance-import.js"></script>
 <script src="/account-detail.js?v=222"></script><script src="/vehicle-value.js"></script>
 <script src="/payoff.js"></script>
 <script src="/transaction-presentation.js"></script><script src="/transactions.js?v=219"></script><script src="/transaction-tools.js"></script><script src="/sankey-model.js"></script><script src="/cash-flow.js"></script><script src="/transaction-inline.js"></script><script src="/category-search-model.js"></script><script src="/transaction-pickers.js?v=219"></script><script src="/transaction-search.js"></script><script src="/transaction-rule-dialog.js"></script><script src="/insight-chart-model.js"></script><script src="/transaction-insight.js"></script><script src="/transaction-filters.js"></script><script src="/transaction-header.js"></script><script src="/list-controls.js?v=219"></script><script src="/report-sankey-model.js"></script><script src="/reports.js"></script><script src="/planning.js"></script><script src="/financial-tools-model.js"></script><script src="/financial-tools.js"></script><script src="/payroll.js"></script><script src="/transaction-extras.js"></script><script src="/transaction-scroll.js"></script><script src="/chatgpt-import-review.js"></script><script src="/import-inline.js"></script><script src="/import-owner.js"></script><script src="/transaction-import-ui.js"></script><script src="/category-editor.js"></script><script src="/money-movements.js"></script><script src="/upload-center.js"></script>
-<script src="/import-flow-model.js"></script><script src="/import-wizard.js"></script><script src="/expense-capture.js?v=219"></script><script src="/funds-plan.js"></script><script src="/funds-quick.js"></script><script src="/tools-navigation.js"></script><script src="/bills-workspace.js?v=219"></script><script src="/cushion.js"></script><script src="/budget-progress-model.js"></script><script src="/budget-expense-sections.js"></script><script src="/budget-workspace.js?v=221"></script><script src="/investment-total-model.js"></script><script src="/investment-chart-model.js"></script><script src="/investment-allocation-model.js"></script><script src="/investment-visualization.js"></script><script src="/investments.js"></script><script src="/investment-history.js"></script><script src="/other-investments.js"></script><script src="/ibkr-flex.js"></script><script src="/financial-analysis.js"></script><script src="/navigation.js"></script><script src="/layout-model.js"></script><script src="/personal-layout.js"></script><script src="/layout-drag.js"></script><script src="/sign-in.js"></script>
+<script src="/import-flow-model.js"></script><script src="/import-wizard.js"></script><script src="/expense-capture.js?v=219"></script><script src="/funds-plan.js?v=223"></script><script src="/funds-quick.js?v=223"></script><script src="/tools-navigation.js"></script><script src="/bills-workspace.js?v=219"></script><script src="/cushion.js"></script><script src="/budget-progress-model.js"></script><script src="/budget-expense-sections.js"></script><script src="/budget-workspace.js?v=221"></script><script src="/investment-total-model.js"></script><script src="/investment-chart-model.js"></script><script src="/investment-allocation-model.js"></script><script src="/investment-visualization.js"></script><script src="/investments.js"></script><script src="/investment-history.js"></script><script src="/other-investments.js"></script><script src="/ibkr-flex.js"></script><script src="/financial-analysis.js"></script><script src="/navigation.js"></script><script src="/layout-model.js"></script><script src="/personal-layout.js"></script><script src="/layout-drag.js"></script><script src="/sign-in.js"></script>
 <script src="/transaction-cleanup.js"></script><script src="/compact-shell.js"></script><script src="/form-fields.js?v=219"></script><script src="/cash-calendar.js?v=219"></script><script src="/tax-documents.js?v=219"></script><script src="/header-page-controls.js"></script>
 </body>
 </html>
