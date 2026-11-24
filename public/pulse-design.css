@@ -1091,7 +1091,7 @@ body>header .cash-calendar-navigation button{min-width:28px;padding-inline:7px}
 
 
 .dashboard-funds-key{display:flex;flex-wrap:wrap;gap:4px 14px;margin:0 0 10px;color:var(--text-2);font-size:12px}
-.dashboard-funds-key span::before{content:'';display:inline-block;width:12px;border-top:2px solid #599de5;margin-right:6px;vertical-align:middle}
+.dashboard-funds-key span::before{content:'';display:inline-block;width:12px;border-top:2px solid var(--accent);margin-right:6px;vertical-align:middle}
 .dashboard-funds-key span:nth-child(2):not(:last-child)::before{border-color:var(--close)}
 .dashboard-funds-key span:last-child::before{border-color:var(--danger)}
 
@@ -1126,4 +1126,103 @@ body>header .cash-calendar-navigation button{min-width:28px;padding-inline:7px}
  }
  .calendar-transfer-row>.calendar-row-amount,.calendar-categorized-row>.calendar-row-amount{justify-self:end}
  .calendar-row-actions{justify-content:flex-end}
+}
+
+/* Slate & Indigo refinement. Financial semantics remain separate from brand chrome. */
+:root{
+ --surface:#f5f6fa;--surface-muted:#eceef5;--surface-elevated:#fff;
+ --text:#202538;--text-1:#202538;--text-2:#555e73;--text-3:#6c7488;
+ --border:#e0e4ed;--border-strong:#a8afbf;
+ --accent:#565bc4;--accent-soft:#ececfa;--on-track:#565bc4;
+ --cash:#17778a;--positive:#247554;--danger:#b23a53;--over:#b23a53;--close:#87631e;
+ --shell-sidebar:#eef0f6;--shell-header:#f5f6fa;--shell-toolbar:#f5f6fa;--shell-border:#e0e4ed;
+ --motion-feedback:140ms;--motion-popover:180ms;--motion-dialog:230ms;--motion-profile:340ms;
+}
+[data-theme=dark]{
+ --surface:#151722;--surface-muted:#292d3b;--surface-elevated:#202330;
+ --text:#eceef8;--text-1:#eceef8;--text-2:#bec2d3;--text-3:#9aa1b7;
+ --border:#34394b;--border-strong:#62697e;
+ --accent:#a3a6f4;--accent-soft:#303354;--on-track:#a3a6f4;
+ --cash:#72c4d0;--positive:#79c9a5;--danger:#f18b9e;--over:#f18b9e;--close:#e1bd78;
+ --shell-sidebar:#12141d;--shell-header:#151722;--shell-toolbar:#151722;--shell-border:#34394b;
+}
+body::after{display:none}
+button{transition-duration:var(--motion-feedback)}
+[data-theme=dark] button.primary{background:var(--accent);border-color:var(--accent);color:#191b2a}
+.profile,.profile-avatar{transition-duration:var(--motion-profile)!important}
+.profile .profile-avatar,.profile:nth-child(2n) .profile-avatar,.profile:nth-child(3n) .profile-avatar{background:var(--surface-muted);color:var(--text);border-color:var(--border)}
+.profile:hover .profile-avatar,.profile:focus-visible .profile-avatar{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.profile-arrival{position:fixed;inset:0;z-index:10000;pointer-events:auto;background:transparent;opacity:1;transition:opacity 240ms var(--pulse-ease)}
+.profile-arrival-backdrop{position:absolute;inset:0;background:var(--surface);opacity:.98}
+.profile-arrival-avatar{position:fixed;z-index:2;display:grid;place-items:center;border:1px solid var(--accent);border-radius:50%;background:var(--accent-soft);color:var(--accent);font:500 30px var(--font-body);transform:translate3d(0,0,0);transition:transform var(--motion-profile) var(--pulse-ease),background-color var(--motion-feedback) var(--pulse-ease)}
+.profile-arrival.is-active .profile-arrival-avatar{transform:translate3d(var(--profile-arrival-x),var(--profile-arrival-y),0)}
+.profile-arrival-words{position:fixed;z-index:2;left:50%;top:min(52vh,400px);display:grid;gap:4px;text-align:center;transform:translate(-50%,8px);opacity:0;color:var(--text);transition:opacity 220ms var(--pulse-ease),transform 220ms var(--pulse-ease)}
+.profile-arrival-words strong{font-size:22px;font-weight:500}.profile-arrival-words span{font-size:13px;color:var(--text-2)}
+.profile-arrival.is-active .profile-arrival-words{opacity:1;transform:translate(-50%,0)}
+.profile-arrival.is-leaving{opacity:0;pointer-events:none}
+
+/* Funds Check is a primary decision surface, not a secondary report. */
+#view-funds>.card{max-width:1280px;margin-inline:auto}
+.funds-quick-heading,.funds-forecast-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:24px}
+.funds-quick-heading h3{margin:0 0 4px;font-size:30px!important;font-weight:500}
+.funds-quick-heading p{margin:0;max-width:720px}
+.funds-quick-controls{display:grid;grid-template-columns:minmax(120px,.7fr) minmax(180px,1fr) minmax(160px,.9fr) minmax(190px,1fr);gap:12px;margin:24px 0 12px}
+.funds-quick-controls label{max-width:none!important}
+.funds-quick-controls input,.funds-quick-controls select{height:48px;min-height:48px;font-size:15px}
+.funds-quick-controls #fcQuickAmount{font-size:20px}
+.funds-verdict{border-left-color:var(--accent);margin:20px 0 16px}
+.funds-forecast-panel{margin:16px 0 24px;padding:20px 20px 12px;border:1px solid var(--border);border-radius:14px;background:var(--surface-elevated)}
+.funds-forecast-heading{align-items:end;margin-bottom:10px}
+.funds-forecast-heading h4{font-size:18px;margin:4px 0 0;font-weight:500}
+.funds-forecast-heading p{margin:0;color:var(--text-2);text-align:right}
+.funds-chart-scroll{margin:12px 0 0;overscroll-behavior-x:contain}
+.funds-chart-scroll svg{min-width:720px;overflow:visible}
+.funds-grid-line{stroke:var(--border);stroke-width:1}
+.funds-threshold{stroke-width:1.25;stroke-dasharray:5 5}
+.funds-threshold-zero{stroke:var(--danger)}
+.funds-threshold-buffer{stroke:var(--close)}
+.funds-threshold-label{font:500 11px var(--font-body);fill:var(--text-2);paint-order:stroke;stroke:var(--surface-elevated);stroke-width:4px}
+.funds-minimum-marker circle:first-child{fill:var(--surface-elevated);stroke:var(--danger);stroke-width:2}
+.funds-minimum-marker circle:nth-child(2){fill:var(--danger)}
+.funds-event-marker{color:var(--cash)}
+.funds-event-marker.is-estimated{color:var(--text-3)}
+.funds-event-marker line{stroke:currentColor;stroke-width:1;stroke-opacity:.34;stroke-dasharray:2 3}
+.funds-event-marker circle{fill:currentColor}
+.funds-event-marker[data-event-kind=rent],.funds-event-marker[data-event-kind=card]{color:var(--close)}
+.funds-event-marker[data-event-kind=income]{color:var(--positive)}
+.funds-event-marker.is-estimated circle{fill:var(--surface-elevated);stroke:currentColor;stroke-width:1.5}
+.funds-chart-legend{align-items:center;gap:8px 18px;margin:2px 0 4px;color:var(--text-2)}
+.funds-chart-legend span{display:inline-flex;align-items:center;gap:7px}
+.funds-chart-legend span::before{content:'';display:block;width:20px;height:0;margin:0;border-top:2px solid var(--accent)}
+.funds-chart-legend .funds-series-baseline::before{border-top-color:var(--text-2);border-top-style:dashed}
+.funds-chart-legend .funds-event-confirmed::before,.funds-chart-legend .funds-event-estimated::before{width:7px;height:7px;border:0;border-radius:50%;background:var(--cash)}
+.funds-chart-legend .funds-event-estimated::before{box-sizing:border-box;background:var(--surface-elevated);border:1.5px solid var(--text-3)}
+.funds-point-details{width:min(320px,calc(100vw - 64px));padding:14px;border-radius:10px;box-shadow:0 12px 32px #00000024}
+.fund-flow-status{display:inline-flex;align-items:center;gap:6px;color:var(--text-2);font-size:12px;white-space:nowrap}
+.fund-flow-status::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--cash)}
+.fund-flow-status.is-estimated::before{box-sizing:border-box;background:transparent;border:1.5px solid var(--text-3)}
+.funds-setup-required{margin:20px 0;padding:20px;border:1px solid var(--border);border-radius:12px;background:var(--surface-muted)}
+.funds-setup-required h4{margin:0 0 8px;font-size:17px}.funds-setup-required p{margin:0;max-width:760px;color:var(--text-2)}
+#fcQuickResults{transition:opacity var(--motion-popover) var(--pulse-ease)}
+#fcQuickResults.is-stale{opacity:.58}
+
+@media(max-width:800px){
+ .funds-quick-heading,.funds-forecast-heading{display:block}
+ .funds-quick-heading #fcBaselineBtn{margin-top:12px}
+ .funds-quick-controls{grid-template-columns:1fr 1fr}
+ .funds-forecast-heading p{text-align:left;margin-top:8px}
+ .funds-forecast-panel{padding:16px 12px 10px;margin-inline:-4px}
+ .funds-chart-scroll svg{min-width:660px}
+}
+@media(max-width:520px){
+ .funds-quick-heading h3{font-size:26px!important}
+ .funds-quick-controls{grid-template-columns:1fr}
+ .funds-chart-legend{gap:7px 12px}
+ .funds-forecast-panel{margin-inline:-8px;border-radius:12px}
+ body:has(#view-funds:not(.hidden)) #quickExpense{right:12px;bottom:12px}
+}
+@media(prefers-reduced-motion:reduce){
+ .profile-arrival,.profile-arrival-avatar,.profile-arrival-words{transition:none!important}
+ .profile-arrival.is-active .profile-arrival-avatar{transform:none}
+ .profile-arrival-words{opacity:1;transform:translate(-50%,0)}
 }

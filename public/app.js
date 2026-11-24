@@ -17,7 +17,7 @@ function applyTheme(theme) {
     dark.setAttribute('aria-pressed', t === 'dark' ? 'true' : 'false');
   }
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', t === 'dark' ? '#141820' : '#f3f6fb');
+  if (meta) meta.setAttribute('content', t === 'dark' ? '#151722' : '#f5f6fa');
 }
 $('themeLight').onclick = () => applyTheme('light');
 $('themeDark').onclick = () => applyTheme('dark');
@@ -398,7 +398,7 @@ $('addHoldingBtn').onclick=async()=>{ await post('/api/holdings',{name:$('hName'
 
 // ---------- import ----------
 
-if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
+if('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js',{updateViaCache:'none'}).then(registration=>registration.update()).catch(()=>{});
 (async()=>{ try{ const me=await api('/api/me'); showApp(me.user, me.householdUsers); }catch{ showAuth(); } })();
 
 // A consistent, local SVG icon family for the sidebar.

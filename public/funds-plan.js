@@ -12,11 +12,11 @@ function fundsChart(d,compare=false,{compact=false,width=900}={}){
  const buffer=Math.max(0,Number(d.buffer)||0);
  const max=Math.max(1,buffer,...values),min=Math.min(0,d.minimum,...values);
  const plotHeight=compact?132:180;
- const left=compact?22:44,right=width-(compact?22:46);
+ const left=compact?58:78,right=width-(compact?24:46);
  const x=index=>left+index/Math.max(1,rows.length-1)*(right-left);
  const y=amount=>20+(max-amount)/Math.max(1,max-min)*plotHeight;
  const step=Math.max(1,Math.ceil((rows.length-1)/(width<480?3:5)));
- const normal='#599de5',low='var(--close)',zero='var(--danger)';
+ const normal='var(--accent)',low='var(--close)',zero='var(--danger)';
  const palette=[{offset:0,color:normal}];
  const threshold=(amount,above,below)=>{
   const offset=(y(amount)-20)/plotHeight;
@@ -28,16 +28,22 @@ function fundsChart(d,compare=false,{compact=false,width=900}={}){
  const gradientId='funds-balance-colors-'+ ++fundsChartSequence;
  const pointColor=balance=>balance<=0?zero:buffer>0&&balance<buffer?low:normal;
  const path=timeline=>timeline.map((row,index)=>`${index?'L':'M'}${x(index)},${y(row.balance)}`).join(' ');
+ const minimumIndex=Math.max(0,rows.findIndex(row=>row.date===d.minimumDate));
+ const eventType=event=>/pay|income/i.test(event.kind+' '+event.label)?'income':/rent/i.test(event.label)?'rent':/card payment/i.test(event.kind+' '+event.label)?'card':/transfer/i.test(event.kind+' '+event.label)?'transfer':'bill';
+ const eventDays=rows.map((row,index)=>({row,index,events:(row.events||[]).filter(event=>!/everyday spending/i.test(event.label))})).filter(day=>day.events.length);
  return `<div class="funds-interactive-chart">
- ${compare?'<div class="funds-chart-legend"><span>Without purchase</span><span>With purchase</span></div>':''}
+ <div class="funds-chart-legend">${compare?'<span class="funds-series-baseline">Baseline</span><span class="funds-series-scenario">After purchase</span>':'<span class="funds-series-scenario">Projected balance</span>'}<span class="funds-event-confirmed">Confirmed event</span><span class="funds-event-estimated">Estimated event</span></div>
  <div class="funds-chart-scroll"><svg viewBox="0 0 ${width} ${plotHeight+(compact?53:70)}" data-plot-left="${left}" data-plot-right="${right}" tabindex="0" role="slider" aria-label="Forecast date. Use arrow keys to move between days" aria-valuemin="1" aria-valuemax="${rows.length}">
   <defs><linearGradient id="${gradientId}" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="20" y2="${20+plotHeight}">${palette.map(({offset,color})=>`<stop offset="${offset}" stop-color="${color}"/>`).join('')}</linearGradient></defs>
-  <path d="M${left} ${y(0)}H${right}" stroke="${zero}" stroke-opacity=".55" stroke-dasharray="4 4"/>
-  ${buffer>0?`<path d="M${left} ${y(buffer)}H${right}" stroke="${low}" stroke-opacity=".55" stroke-dasharray="3 5"/>`:''}
+  ${[max,(max+min)/2,min].map(value=>`<path d="M${left} ${y(value)}H${right}" class="funds-grid-line"/><text x="${left-8}" y="${y(value)+4}" text-anchor="end" class="flow-axis">${esc(money(value))}</text>`).join('')}
+  <path d="M${left} ${y(0)}H${right}" class="funds-threshold funds-threshold-zero"/><text x="${right-4}" y="${y(0)-6}" text-anchor="end" class="funds-threshold-label">Zero balance</text>
+  ${buffer>0?`<path d="M${left} ${y(buffer)}H${right}" class="funds-threshold funds-threshold-buffer"/><text x="${right-4}" y="${y(buffer)-6}" text-anchor="end" class="funds-threshold-label">Minimum buffer · ${esc(money(buffer))}</text>`:''}
   ${compare?`<path data-funds-baseline d="${path(baseline)}" fill="none" stroke="var(--text-2)" stroke-dasharray="5 4" stroke-width="2"/>`:''}
   <path d="${path(rows)}" fill="none" stroke="url(#${gradientId})" stroke-width="${compact?2:3}"/>
+  ${eventDays.map(({row,index,events})=>`<g class="funds-event-marker ${events.some(event=>event.estimated)?'is-estimated':'is-confirmed'}" data-event-kind="${eventType(events[0])}"><line x1="${x(index)}" x2="${x(index)}" y1="${y(row.balance)+7}" y2="${plotHeight+25}"/><circle cx="${x(index)}" cy="${plotHeight+25}" r="${compact?2.5:3.5}"/><title>${esc(events.map(event=>event.label+(event.estimated?' · estimated':' · confirmed')).join(', '))}</title></g>`).join('')}
   ${rows.map((row,index)=>`<circle data-funds-point cx="${x(index)}" cy="${y(row.balance)}" r="${index>0&&row.balance!==rows[index-1].balance?(compact?2.5:3):0}" fill="${pointColor(row.balance)}"/>
     ${index===rows.length-1||index%step===0&&rows.length-1-index>step/2?`<text x="${x(index)}" y="${plotHeight+(compact?42:50)}" text-anchor="middle" class="flow-axis">${esc(row.date.slice(5))}</text>`:''}`).join('')}
+  <g class="funds-minimum-marker"><circle cx="${x(minimumIndex)}" cy="${y(rows[minimumIndex].balance)}" r="${compact?5:7}"/><circle cx="${x(minimumIndex)}" cy="${y(rows[minimumIndex].balance)}" r="${compact?2:3}"/><title>Lowest projected balance · ${esc(txDateLabel(rows[minimumIndex].date))} · ${esc(money(rows[minimumIndex].balance))}</title></g>
   <line data-funds-marker y1="14" y2="${plotHeight+24}" stroke="var(--text-3)" stroke-dasharray="4 4"/>
   <circle data-funds-selected r="${compact?4:6}" fill="var(--accent)" stroke="var(--text-1)" stroke-width="2"/>
  </svg></div><div class="funds-point-details" role="tooltip" hidden></div></div>`;
