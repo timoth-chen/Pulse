@@ -83,8 +83,9 @@ const periodDateLabel=date=>new Intl.DateTimeFormat('en-CA',{timeZone:'UTC',mont
 function periodFor(range, anchor, customFrom='', customTo='') {
   const a = anchor || todayStr();
   if(range==='custom'){
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(customFrom)||!/^\d{4}-\d{2}-\d{2}$/.test(customTo)||customFrom>customTo)throw Error('Choose a valid custom date range.');
-    if((Date.parse(customTo)-Date.parse(customFrom))/86400000>3660)throw Error('Custom dashboard ranges can cover at most ten years.');
+    const fromTime=Date.parse(customFrom+'T12:00:00Z'),toTime=Date.parse(customTo+'T12:00:00Z');
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(customFrom)||!/^\d{4}-\d{2}-\d{2}$/.test(customTo)||!Number.isFinite(fromTime)||!Number.isFinite(toTime)||customFrom>customTo)throw Error('Choose a valid custom date range.');
+    if((toTime-fromTime)/86400000>3660)throw Error('Custom dashboard ranges can cover at most ten years.');
     return {range,start:customFrom,end:customTo,label:periodDateLabel(customFrom)+'–'+periodDateLabel(customTo)};
   }
   if (range === 'day') return { range, start: a, end: a, label: periodDateLabel(a) };

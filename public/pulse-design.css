@@ -1210,7 +1210,7 @@ button{transition-duration:var(--motion-feedback)}
 #fcQuickResults.is-stale{opacity:.58}
 
 /* Dashboard: one reporting clock, one forward-looking decision tool. */
-.dashboard-period{display:flex;align-items:center;justify-content:space-between;gap:12px 20px;flex-wrap:wrap;margin:0 0 20px;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--surface-elevated)}
+.dashboard-period{display:flex;align-items:center;justify-content:space-between;gap:12px 20px;flex-wrap:wrap;width:100%;min-width:0;box-sizing:border-box;margin:0 0 20px;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--surface-elevated)}
 .dashboard-period-ranges,.dashboard-period-nav,.dashboard-custom-period{display:flex;align-items:center;gap:4px}
 .dashboard-period-ranges button{min-height:34px;padding:6px 10px;border-color:transparent;background:transparent;color:var(--text-2)}
 .dashboard-period-ranges button.active{border-color:var(--border);background:var(--accent-soft);color:var(--text)}
@@ -1218,7 +1218,7 @@ button{transition-duration:var(--motion-feedback)}
 .dashboard-period-nav .icon-button{width:34px;min-width:34px;height:34px;min-height:34px}
 .dashboard-custom-period label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-2)}
 .dashboard-custom-period input{width:142px;min-height:34px;margin:0}
-.dashboard-funds{padding:24px!important}
+.dashboard-funds{width:100%;min-width:0;box-sizing:border-box;padding:24px!important}
 .dashboard-funds .widget-head{align-items:flex-start;margin-bottom:20px}.dashboard-funds .widget-head h3{margin:2px 0 4px;font-size:24px;font-weight:500}.dashboard-funds .widget-head p{margin:0}
 .dashboard-funds-controls{display:grid;grid-template-columns:minmax(150px,1fr) minmax(150px,.9fr) minmax(180px,1.1fr) minmax(130px,.75fr) minmax(150px,.9fr) auto;gap:10px;align-items:end}
 .dashboard-funds-controls label{max-width:none}.dashboard-funds-controls input,.dashboard-funds-controls select{height:42px;min-height:42px}
@@ -1231,7 +1231,7 @@ button{transition-duration:var(--motion-feedback)}
 .dashboard-summary>.card+.card{border-left:1px solid var(--border)}
 
 @media(max-width:1000px){.dashboard-funds-controls{grid-template-columns:repeat(2,minmax(0,1fr))}.dashboard-funds-actions{grid-column:1/-1}.dashboard-period{align-items:flex-start}.dashboard-summary{grid-template-columns:1fr 1fr}.dashboard-summary>.card:nth-child(3){border-left:0;border-top:1px solid var(--border)}.dashboard-summary>.card:nth-child(4){border-top:1px solid var(--border)}}
-@media(max-width:600px){.dashboard-period-ranges{overflow:auto;width:100%;padding-bottom:2px}.dashboard-period-nav{width:100%;justify-content:space-between}.dashboard-period-nav strong{min-width:0;flex:1}.dashboard-custom-period{display:grid;grid-template-columns:1fr 1fr;width:100%}.dashboard-custom-period button{grid-column:1/-1}.dashboard-custom-period input{width:100%}.dashboard-funds{padding:16px!important}.dashboard-funds-controls{grid-template-columns:1fr}.dashboard-funds-actions{grid-column:auto}.dashboard-funds-actions button{flex:1}.dashboard-funds-metrics{display:grid;grid-template-columns:1fr 1fr}.dashboard-summary{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.dashboard-period-ranges{overflow:auto;width:100%;min-width:0;padding-bottom:2px}.dashboard-period-nav{width:100%;min-width:0;justify-content:space-between}.dashboard-period-nav strong{min-width:0;flex:1}.dashboard-custom-period{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);width:100%;min-width:0}.dashboard-custom-period label,.dashboard-custom-period .clearable-field{min-width:0;width:100%}.dashboard-custom-period button{grid-column:1/-1}.dashboard-custom-period input{width:100%;min-width:0}.dashboard-funds{padding:16px!important}.dashboard-funds-controls{grid-template-columns:minmax(0,1fr)}.dashboard-funds-actions{grid-column:auto}.dashboard-funds-actions button{flex:1}.dashboard-funds-metrics{display:grid;grid-template-columns:1fr 1fr}.dashboard-summary{grid-template-columns:1fr 1fr}}
 
 @media(max-width:800px){
  .funds-quick-heading,.funds-forecast-heading{display:block}

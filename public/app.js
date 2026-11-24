@@ -410,7 +410,7 @@ const navPaths={calendar:'M4 5h16v15H4ZM4 9h16M8 3v4m8-4v4',payroll:'M6 3h12v18l
 document.querySelectorAll('nav [data-view]').forEach(b=>b.insertAdjacentHTML('afterbegin',`<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${navPaths[b.dataset.view]}"/></svg>`));
 function goView(view){ document.querySelector(`nav [data-view="${view}"]`).click(); window.scrollTo({top:0,behavior:'instant'}); }
 $('addActivity').onclick=()=>{goView('transactions');openNewTransaction();};
-$('recapGoals').onclick=()=>goView('goals');
+if($('recapGoals'))$('recapGoals').onclick=()=>goView('goals');
 $('settingsProfile').onclick=()=>$('logoutBtn').click();
 async function loadHomeWidgets(){
   try {
