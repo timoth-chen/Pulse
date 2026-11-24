@@ -26,6 +26,7 @@ const { scopedDb, ownerOptions } = require('./lib/owner-scope');
 const { stageBalances, importBalances, publicBalanceImport } = require('./lib/balance-import');
 
 const PORT = process.env.PORT || 8080;
+const HOST = process.env.HOST;
 const DATA_DIR = process.env.HF_DATA_DIR || path.join(__dirname, 'data');
 const SESSION_DAYS = 30;
 const store = new Store(DATA_DIR);
@@ -854,5 +855,5 @@ app.get('/health', (_req, res) => res.json({ ok: true, version: 3, storage: 'sql
 app.get(['/signin','/dashboard','/accounts','/accounts/:id','/accounts/loans/:id','/transactions','/transactions/:tabOrId','/transactions/categories/:name','/transactions/groups/:name','/transactions/merchants/:name','/cash-flow','/reports','/forecast','/payroll','/tools','/funds-check','/calendar','/budget','/savings','/goals','/recurring','/payoff','/investments','/import','/settings'],(_req,res)=>res.sendFile(path.join(__dirname,'public/index.html')));
 
 app.use((err,_req,res,_next)=>{ console.error(err.message);res.status(500).json({error:'The change could not be saved. Reload and try again.'}); });
-const server=app.listen(PORT, () => console.log(`Pulse listening on http://localhost:${PORT} · SQLite storage`));
+const server=app.listen(PORT, HOST, () => console.log(`Pulse listening on http://${HOST || 'localhost'}:${PORT} · SQLite storage`));
 for(const signal of ['SIGINT','SIGTERM'])process.on(signal,()=>server.close(()=>{store.close();process.exit(0);}));
