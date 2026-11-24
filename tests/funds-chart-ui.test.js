@@ -51,7 +51,7 @@ test('profile arrival protects previous financial data and respects reduced moti
 test('Slate and Indigo browser chrome and fresh service worker are configured', () => {
   assert.match(app, /'#151722'\s*:\s*'#f5f6fa'/);
   assert.match(app, /updateViaCache:'none'/);
-  assert.match(sw, /household-finance-v222/);
+  assert.match(sw, /household-finance-v223/);
 });
 
 test('dashboard Funds Check owns one in-place interactive scenario flow', () => {

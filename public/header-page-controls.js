@@ -10,6 +10,21 @@ function headerControl(view,selector,side='left'){
 }
 headerControl('cashflow','#cashflowPeriod');
 headerControl('dashboard','.dashboard-period');
+for(const [selectId,groupId] of [['dashboardRangePreset','dashboardReportingPresets'],['dashboardFundsDays','dashboardForecastPresets']]){
+ const select=$(selectId),group=$(groupId);
+ const sync=()=>{for(const button of group.children)button.setAttribute('aria-pressed',String(button.dataset.value===select.value));};
+ for(const option of select.options){
+  const button=document.createElement('button');
+  button.type='button';
+  button.dataset.value=option.value;
+  button.textContent=option.textContent.replace(/^Next (\d+) days$/,'$1 days');
+  button.onclick=()=>{select.value=option.value;select.dispatchEvent(new Event('change'));};
+  group.append(button);
+ }
+ select.addEventListener('change',sync);
+ select.closest('details').addEventListener('toggle',sync);
+ sync();
+}
 headerControl('cashflow','.cashflow-toolbar>.filter-popover','right');
 headerControl('budgets','.budget-workspace-toolbar>.row:first-child');
 headerControl('budgets','.budget-workspace-toolbar>.row:last-child','right');
